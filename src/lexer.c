@@ -245,6 +245,38 @@ Token Lexer_next(Lexer* lex) {
   return (Token){0};
 }
 
+char* Lexer_line(Lexer* lex, size_t line) {
+  assert(lex);
+  assert(line > 0);
+
+  size_t start = 0, n_line = 1;
+  for (; lex->buf[start] != '\0'; ++start) {
+    if (lex->buf[start] == '\n')
+      n_line += 1;
+    if (n_line == line)
+      break;
+  }
+
+  if (n_line < line)
+    return NULL;
+
+  size_t end = start + 1;
+  while (lex->buf[end] != '\n' && lex->buf[end] != '\0')
+    end += 1;
+
+  size_t len = end - start;
+  char* buf = malloc(len + 1);
+  if (!buf) {
+    perror("malloc() failed");
+    return NULL;
+  }
+
+  strncpy(buf, lex->buf, len);
+  buf[len] = '\0';
+
+  return buf;
+}
+
 static bool isAtEnd(Lexer* lex) { return lex->buf[lex->cur] == '\0'; }
 
 static char peek(Lexer* lex) { return lex->buf[lex->cur]; }
@@ -432,20 +464,21 @@ static Token parseChar(Lexer* lex) {
 
 static Token parseString(Lexer* lex) {
   Token tok;
+  size_t col = lex->cur - lex->bol;
   while (true) {
     tok = parseChar(lex);
-    if (tok.type == TOKEN_CHAR && tok.value[tok.len] == '"')
-      return tok;
-    if (tok.type == TOKEN_ERROR)
-      return tok;
+    if (tok.type == TOKEN_CHAR && tok.value[tok.len] == '"' || tok.type == TOKEN_ERROR)
+      break;
   }
+  tok.col = col;
+  return tok;
 }
 
 static Token makeErrorToken(Lexer* lex, char const* msg) {
   return (Token){
       .type = TOKEN_ERROR,
       .col = lex->cur - lex->bol,
-      .line = lex->line,
+      .line = lex->line + 1,
       .len = lex->cur - lex->start,
       .value = msg,
   };

@@ -1,0 +1,11 @@
+lexer.c:
+
+    - Backtracking does not take into account a line number and a beginning
+      of a line (bol). This leads to wrong line numbers on tokens.
+
+parser.c:
+
+    - Add a vector of errors and a vector of warnings. Parser does not panic
+      on a first encountered error, but puts it into a vector and skips the
+      line, continuing parsing. After the parsing is done, errors are formatted
+      and printed.

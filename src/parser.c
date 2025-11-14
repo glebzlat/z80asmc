@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <stdarg.h>
+#include <stdarg.h>
 #include <stdint.h>
 
 #include "lexer.h"
@@ -34,6 +36,8 @@ static Result comma(Parser* p);
 static void advance(Parser* p);
 static void skip(Parser* p);
 static int parseInstruction(Parser* p);
+
+static void error(Parser* p, const char* fmt, ...);
 
 Parser Parser_make(Lexer* lex) {
   assert(lex);
@@ -97,11 +101,6 @@ Result reg8Bit(Parser* p) {
 }
 
 Result int8Bit(Parser* p) {
-  // TODO: Add a vector of errors and an error flag to the Parser.
-  // If the parsing function raises the error flag, parser skips the line
-  // entirely. Modify the lexer to treat newlines not as a whitespace, but
-  // rather than a delimiter. In this case I will be able to skip the line
-  // on which the error is triggered entirely and start over.
   uint64_t result;
   Token cur = p->buf[p->ptr];
   if (cur.type == TOKEN_DECIMAL || cur.type == TOKEN_HEXADECIMAL || cur.type == TOKEN_OCTAL ||
@@ -146,7 +145,8 @@ int parseInstruction(Parser* p) {
     if (COND) {                                                                                                        \
       BODY;                                                                                                            \
       if (!tokenType(p, TOKEN_NEWLINE).success && !tokenType(p, TOKEN_END).success) {                                  \
-        printf("parse(): excessive characters at the end of an instruction\n");                                        \
+        error(p, "excessive characters at the end of an instruction: %.*s", (int)p->buf[p->ptr].len,                   \
+              p->buf[p->ptr].value);                                                                                   \
         goto error;                                                                                                    \
       }                                                                                                                \
       goto success;                                                                                                    \
@@ -174,7 +174,7 @@ int parseInstruction(Parser* p) {
         { printf("ld R R: r1=%i r2=%i\n", results[0].value.val, results[1].value.val); });
     ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(int8Bit(p)),
         { printf("ld R N: r=%i, n=%i\n", results[0].value.val, results[1].value.val); });
-    printf("wrong operands to instruction\n");
+    error(p, "wrong operands to instruction");
     skip(p);
     goto error;
   } else if (tokenId(p, "push").success) {
@@ -186,15 +186,14 @@ int parseInstruction(Parser* p) {
     advance(p);
     ALT(MATCH(tokenId(p, "bc")), printf("pop bc\n"));
   } else if (p->buf[p->ptr].type != TOKEN_ID) {
-    printf("error: expected instruction name, %s\n", TokenType_str(p->buf[p->ptr].type));
+    error(p, "expected instruction name");
     skip(p);
   } else {
-    printf("error: unknown instruction: %.*s\n", (int)p->buf[p->ptr].len, p->buf[p->ptr].value);
+    error(p, "unknown instruction: %.*s", (int)p->buf[p->ptr].len, p->buf[p->ptr].value);
     skip(p);
   }
 
 error:
-  printf("error\n");
   return 1;
 
 success:
@@ -204,4 +203,26 @@ success:
 #undef MATCH_SAVE
 #undef MATCH
   return 1;
+}
+
+static void error(Parser* p, const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  // I could have used vprintf, but the formatted string will be used
+  // later when I will be saving errors.
+  char* str = vdsprintf(fmt, ap);
+  va_end(ap);
+
+  if (!str)
+    die("vdsprintf() failed");
+
+  Token* last = &p->buf[p->ptr];
+  printf("%li:%li: error: %s\n", last->line, last->col, str);
+
+  char* source_line = Lexer_line(p->lex, last->line);
+  if (source_line) {
+    printf("%s\n", source_line);
+    printf("%*s\n", (int)last->col, "^");
+    free(source_line);
+  }
 }

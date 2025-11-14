@@ -65,4 +65,14 @@ unsigned long Token_toInt(Token* tok);
 Lexer Lexer_make(char const* buf);
 Token Lexer_next(Lexer* lex);
 
+/** Get a source line from number
+ *
+ * Line numbers count from 1.
+ *
+ * @param lex Lexer instance
+ * @param line Source line number
+ * @returns Null-terminated source code line
+ */
+char* Lexer_line(Lexer* lex, size_t line);
+
 #endif
