@@ -1,11 +1,18 @@
 #include <assert.h>
 #include <stdarg.h>
-#include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "lexer.h"
 #include "parser.h"
 #include "utility.h"
+#include "vector.h"
+
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wparentheses"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wparentheses"
+#endif
 
 #define SAVED_RESULTS_LEN 8
 
@@ -41,7 +48,28 @@ static void error(Parser* p, const char* fmt, ...);
 
 Parser Parser_make(Lexer* lex) {
   assert(lex);
-  return (Parser){.lex = lex};
+
+  Vector* errors = Vector_new(sizeof(ParserError));
+  if (!errors)
+    die("Vector_new() failed");
+
+  return (Parser){
+      .lex = lex,
+      .errors = errors,
+  };
+}
+
+void Parser_deinit(Parser* p) {
+  assert(p);
+
+  for (size_t i = 0; i < Vector_len(p->errors); ++i) {
+    ParserError* err = Vector_at(p->errors, i);
+    free(err->reason);
+    if (err->line)
+      free(err->line);
+  }
+
+  Vector_destroy(p->errors);
 }
 
 static inline bool match_save(Parser* p, Result r, size_t* n_results, Result arr[]) {
@@ -69,6 +97,21 @@ void Parser_parse(Parser* p) {
     for (size_t i = 1; i < TOKEN_BUF_LEN && p->buf[i].type != TOKEN_UNINITIALIZED; ++i)
       p->buf[i].type = TOKEN_UNINITIALIZED;
   }
+}
+
+bool Parser_hasErrors(Parser const* p) {
+  assert(p);
+
+  return !Vector_isEmpty(p->errors);
+}
+
+void ParserError_print(ParserError const* err, FILE* fout) {
+  assert(err);
+  assert(fout);
+
+  fprintf(fout, "%zu:%zu: error: %s\n", err->lineno, err->col, err->reason);
+  if (err->line)
+    fprintf(fout, "%s\n%*s", err->line, (int)err->col, "^\n");
 }
 
 Result tokenType(Parser* p, TokenType type) { return (Result){.success = p->buf[p->ptr].type == type}; }
@@ -208,8 +251,6 @@ success:
 static void error(Parser* p, const char* fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  // I could have used vprintf, but the formatted string will be used
-  // later when I will be saving errors.
   char* str = vdsprintf(fmt, ap);
   va_end(ap);
 
@@ -217,12 +258,14 @@ static void error(Parser* p, const char* fmt, ...) {
     die("vdsprintf() failed");
 
   Token* last = &p->buf[p->ptr];
-  printf("%li:%li: error: %s\n", last->line, last->col, str);
-
   char* source_line = Lexer_line(p->lex, last->line);
-  if (source_line) {
-    printf("%s\n", source_line);
-    printf("%*s\n", (int)last->col, "^");
-    free(source_line);
-  }
+
+  ParserError e = {
+      .reason = str,
+      .line = source_line,
+      .col = last->col,
+      .lineno = last->line,
+  };
+
+  Vector_push(p->errors, &e);
 }

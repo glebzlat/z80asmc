@@ -9,6 +9,8 @@
 #include "parser.h"
 
 int main(int argc, char** argv) {
+  int exitcode = 0;
+
   FILE* fin = fopen(argv[1], "r");
   if (!fin)
     die("fopen() failed");
@@ -22,7 +24,14 @@ int main(int argc, char** argv) {
   Parser p = Parser_make(&lex);
   Parser_parse(&p);
 
+  if (Parser_hasErrors(&p)) {
+    for (size_t i = 0; i < Vector_len(p.errors); ++i)
+      ParserError_print(Vector_at(p.errors, i), stderr);
+    exitcode = 1;
+  }
+
+  Parser_deinit(&p);
   fclose(fin);
 
-  return 0;
+  return exitcode;
 }
