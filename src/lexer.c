@@ -261,6 +261,7 @@ char* Lexer_line(Lexer* lex, size_t line) {
   if (n_line < line)
     return NULL;
 
+  start += 1;
   size_t end = start + 1;
   while (lex->buf[end] != '\n' && lex->buf[end] != '\0')
     end += 1;
@@ -272,7 +273,7 @@ char* Lexer_line(Lexer* lex, size_t line) {
     return NULL;
   }
 
-  strncpy(buf, lex->buf, len);
+  strncpy(buf, lex->buf + start, len);
   buf[len] = '\0';
 
   return buf;
