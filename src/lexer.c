@@ -448,12 +448,15 @@ static Token parseNumber(Lexer* lex) {
 
 static Token parseLiteral(Lexer* lex) {
   // [a-zA-Z_][a-zA-Z0-9_]*
+  Token tok = {0};
   if (matchRanges(lex, 3, 'a', 'z', 'A', 'Z', '_', '_')) {
+    size_t col = lex->cur - lex->bol;
     while (matchRanges(lex, 4, 'a', 'z', 'A', 'Z', '0', '9', '_', '_'))
       ;
-    return makeToken(lex, TOKEN_ID);
+    tok = makeToken(lex, TOKEN_ID);
+    tok.col = col;
   }
-  return (Token){0};
+  return tok;
 }
 
 static Token parseChar(Lexer* lex) {
