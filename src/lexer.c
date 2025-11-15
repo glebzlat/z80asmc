@@ -18,7 +18,7 @@
 static bool isAtEnd(Lexer* lex);
 static char peek(Lexer* lex);
 static char advance(Lexer* lex);
-static void eatWhitespace(Lexer* lex);
+static bool eatWhitespace(Lexer* lex);
 static bool matchChar(Lexer* lex, char c);
 static bool matchLiteral(Lexer* lex, char const* lit);
 static bool matchRange(Lexer* lex, char start, char end);
@@ -162,7 +162,8 @@ Token Lexer_next(Lexer* lex) {
   if (isAtEnd(lex))
     return makeToken(lex, TOKEN_END);
 
-  eatWhitespace(lex);
+  while (eatWhitespace(lex))
+    ;
   lex->start = lex->cur;
 
   Token result;
@@ -293,7 +294,12 @@ static char advance(Lexer* lex) {
   return lex->buf[lex->cur++];
 }
 
-static void eatWhitespace(Lexer* lex) {
+/*
+ * Return true if we have consumed a comment. Then the lexer will try one more
+ * time to cover the case if there is a subsequent comment and thus omit
+ * all comment lines.
+ */
+static bool eatWhitespace(Lexer* lex) {
   char c = peek(lex);
 
   switch (c) {
@@ -305,12 +311,12 @@ static void eatWhitespace(Lexer* lex) {
   case ';':
     while (!isAtEnd(lex) && advance(lex) != '\n')
       ;
-    return;
+    return true;
   default:
-    return;
+    return false;
   }
 
-  eatWhitespace(lex);
+  return eatWhitespace(lex);
 }
 
 static bool matchChar(Lexer* lex, char c) {
