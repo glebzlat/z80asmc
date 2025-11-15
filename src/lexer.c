@@ -331,10 +331,11 @@ static bool matchChar(Lexer* lex, char c) {
 static bool matchLiteral(Lexer* lex, char const* lit) {
   size_t save = lex->cur;
   for (size_t i = 0; i < strlen(lit); ++i) {
-    if (advance(lex) != lit[i]) {
+    if (peek(lex) != lit[i]) {
       lex->cur = save;
       return false;
     }
+    advance(lex);
   }
   return true;
 }
