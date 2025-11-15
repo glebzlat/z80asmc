@@ -31,6 +31,7 @@ char* vdsprintf(char const* format, va_list ap) {
   len = vsnprintf(NULL, 0, format, ap);
   if (len < 0) {
     perror("vsnprintf failed");
+    va_end(aq);
     return NULL;
   }
 
