@@ -9,6 +9,11 @@ set(SOURCES
     src/lexer.c
     src/parser.c
     src/utility.c
+    src/vector.c
+)
+
+set(INCLUDE_DIRECTORIES
+    src
 )
 
 set(COMPILE_OPTIONS
@@ -32,10 +37,20 @@ set(COMPILE_OPTIONS
 )
 set(LINK_OPTIONS)
 
+add_executable(${PROJECT_NAME} ${SOURCES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIRECTORIES})
+target_compile_options(${PROJECT_NAME} PUBLIC ${COMPILE_OPTIONS})
+target_link_options(${PROJECT_NAME} PUBLIC ${LINK_OPTIONS})
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD_REQUIRED ON)
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_EXTENSIONS OFF)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     find_program(CMAKE_C_CPPCHECK cppcheck)
     if (CMAKE_C_CPPCHECK)
         list(APPEND CMAKE_C_CPPCHECK
+            -I${INCLUDE_DIRECTORIES}
             --enable=all
             --suppress=missingIncludeSystem
             --check-level=exhaustive
@@ -44,6 +59,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             --force
         )
     endif()
+    message(STATUS "CMAKE_C_CPPCHECK=${CMAKE_C_CPPCHECK}")
 
     list(APPEND COMPILE_OPTIONS -g)
 
@@ -59,12 +75,3 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     list(APPEND COMPILE_OPTIONS ${SANITIZER_OPTIONS})
     list(APPEND LINK_OPTIONS ${SANITIZER_OPTIONS})
 endif()
-
-add_executable(${PROJECT_NAME} ${SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC src)
-target_compile_options(${PROJECT_NAME} PUBLIC ${COMPILE_OPTIONS})
-target_link_options(${PROJECT_NAME} PUBLIC ${LINK_OPTIONS})
-
-set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
-set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD_REQUIRED ON)
-set_property(TARGET ${PROJECT_NAME} PROPERTY C_EXTENSIONS OFF)
