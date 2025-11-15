@@ -37,6 +37,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     if (CMAKE_C_CPPCHECK)
         list(APPEND CMAKE_C_CPPCHECK
             --enable=all
+            --suppress=missingIncludeSystem
             --check-level=exhaustive
             --enable=warning
             --inconclusive
