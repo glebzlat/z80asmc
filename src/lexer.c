@@ -38,10 +38,10 @@ char* Token_format(Token* tok) {
   assert(tok);
   char* buf = NULL;
   if (tok->type == TOKEN_ERROR) {
-    buf = dsprintf("%li:%li:%s:%s", tok->line, tok->col, TokenType_str(tok->type), tok->value);
+    buf = dsprintf("%zu:%zu:%s:%s", tok->line, tok->col, TokenType_str(tok->type), tok->value);
   } else {
     assert(tok->len < INT_MAX);
-    buf = dsprintf("%li:%li:%s:%.*s", tok->line, tok->col, TokenType_str(tok->type), (int)tok->len, tok->value);
+    buf = dsprintf("%zu:%zu:%s:%.*s", tok->line, tok->col, TokenType_str(tok->type), (int)tok->len, tok->value);
   }
   if (!buf)
     die("dsprintf() failed");
