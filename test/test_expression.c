@@ -50,7 +50,12 @@ int testExpression(char const* input, size_t n_tokens, ...) {
   while (true) {
     Token tok = Lexer_next(&lex);
 
-    CHECK(ExprParser_get(&parser, tok) != -1);
+    if (ExprParser_get(&parser, tok) == -1) {
+      char* tok_str = Token_format(&parser.error.tok);
+      fprintf(stderr, "ExprParser_get failed: %s : %s\n", parser.error.reason, tok_str);
+      free(tok_str);
+      return 1;
+    }
 
     if (tok.type == TOKEN_END)
       break;
