@@ -81,6 +81,7 @@ int ExprParser_get(ExprParser* p, Token tok) {
       Vector_pop(p->o, &tmp);
       Vector_push(p->e, &tmp);
     }
+    Vector_pop(p->o, NULL);
   }
 
   else if (tok.type == TOKEN_END) {

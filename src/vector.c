@@ -59,14 +59,15 @@ int Vector_push(Vector* v, void const* item) {
 
 int Vector_pop(Vector* v, void* dest) {
   assert(v);
-  assert(dest);
 
   if (v->len == 0)
     return -1;
 
   v->len -= 1;
-  uint8_t const* last = v->data + v->len * v->el_size;
-  memcpy(dest, last, v->el_size);
+  if (dest) {
+    uint8_t const* last = v->data + v->len * v->el_size;
+    memcpy(dest, last, v->el_size);
+  }
 
   if (v->len == v->capacity / 2) {
     if (Vector_resize(v, v->capacity / 2) == -1) {
@@ -106,12 +107,12 @@ int Vector_pushFront(Vector* v, void const* item) {
 
 int Vector_popFront(Vector* v, void* dest) {
   assert(v);
-  assert(dest);
 
   if (v->len == 0)
     return -1;
 
-  memcpy(dest, v->data, v->el_size);
+  if (dest)
+    memcpy(dest, v->data, v->el_size);
 
   for (size_t i = 0; i < v->len - 1; ++i) {
     uint8_t* d = v->data + i * v->el_size;
