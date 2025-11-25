@@ -46,6 +46,31 @@ int main(void) {
     tests_failed += testExpression("(1+2)*3", 5, t1, t2, t3, t4, t5);
   }
 
+  {
+    ClueToken t1 = {.lit = "1"}, t2 = {.type = TOKEN_MINUS, .unary = true};
+    tests_failed += testExpression("-1", 2, t1, t2);
+  }
+
+  {
+    ClueToken t1 = {.lit = "1"}, t2 = {.type = TOKEN_PLUS, .unary = true}, t3 = {.type = TOKEN_MINUS, .unary = true};
+    tests_failed += testExpression("-(+1)", 3, t1, t2, t3);
+  }
+
+  {
+    ClueToken t1 = {.lit = "a"};
+    tests_failed += testExpression("a", 1, t1);
+  }
+
+  {
+    ClueToken t1 = {.lit = "01"};
+    tests_failed += testExpression("0x01", 1, t1);
+  }
+
+  // { // XXX: fails
+  //   ClueToken t1 = {.lit = "01"};
+  //   tests_failed += testExpression("01", 1, t1);
+  // }
+
   return tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
