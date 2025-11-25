@@ -97,6 +97,11 @@ int ExprParser_get(ExprParser* p, Token tok) {
     assert(Vector_isEmpty(p->o));
   }
 
+  else {
+    error(p, "unexpected token", tok);
+    return -1;
+  }
+
   p->prev = tok;
 
   return 0;
