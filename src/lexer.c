@@ -41,7 +41,9 @@ char* Token_format(Token* tok) {
     buf = dsprintf("%zu:%zu:%s:%s", tok->line, tok->col, TokenType_str(tok->type), tok->value);
   } else {
     assert(tok->len < INT_MAX);
-    buf = dsprintf("%zu:%zu:%s:%.*s", tok->line, tok->col, TokenType_str(tok->type), (int)tok->len, tok->value);
+    char const* unary_str = tok->unary ? "u:" : "";
+    buf = dsprintf("%zu:%zu:%s%s:%.*s", tok->line, tok->col, unary_str, TokenType_str(tok->type), (int)tok->len,
+                   tok->value);
   }
   if (!buf)
     die("dsprintf() failed");
@@ -114,6 +116,10 @@ char const* TokenType_str(TokenType type) {
     return "TOKEN_LESS_EQUAL";
   case TOKEN_NEWLINE:
     return "TOKEN_NEWLINE";
+  case TOKEN_LEFT_SHIFT:
+    return "TOKEN_LEFT_SHIFT";
+  case TOKEN_RIGHT_SHIFT:
+    return "TOKEN_RIGHT_SHIFT";
   default:
     die("TokenType_str: unknown token type");
   }
@@ -212,10 +218,14 @@ Token Lexer_next(Lexer* lex) {
   case '<':
     if (matchChar(lex, '='))
       return makeToken(lex, TOKEN_LESS_EQUAL);
+    if (matchChar(lex, '<'))
+      return makeToken(lex, TOKEN_LEFT_SHIFT);
     return makeToken(lex, TOKEN_LEFT_BRACE);
   case '>':
     if (matchChar(lex, '='))
       return makeToken(lex, TOKEN_GREATER_EQUAL);
+    if (matchChar(lex, '>'))
+      return makeToken(lex, TOKEN_RIGHT_SHIFT);
     return makeToken(lex, TOKEN_RIGHT_BRACE);
   case '\'':
     lex->start = lex->cur;

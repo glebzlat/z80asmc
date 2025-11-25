@@ -57,30 +57,24 @@ int Vector_push(Vector* v, void const* item) {
   return 0;
 }
 
-void* Vector_pop(Vector* v) {
+int Vector_pop(Vector* v, void* dest) {
   assert(v);
+  assert(dest);
 
   if (v->len == 0)
-    return NULL;
-
-  void* cpy = malloc(v->el_size);
-  if (!cpy) {
-    perror("malloc() failed");
-    return NULL;
-  }
+    return -1;
 
   v->len -= 1;
   uint8_t const* last = v->data + v->len * v->el_size;
-  memcpy(cpy, last, v->el_size);
+  memcpy(dest, last, v->el_size);
 
   if (v->len == v->capacity / 2) {
     if (Vector_resize(v, v->capacity / 2) == -1) {
-      free(cpy);
-      return NULL;
+      return -1;
     }
   }
 
-  return cpy;
+  return 0;
 }
 
 int Vector_pushFront(Vector* v, void const* item) {
@@ -110,33 +104,29 @@ int Vector_pushFront(Vector* v, void const* item) {
   return 0;
 }
 
-void* Vector_popFront(Vector* v) {
+int Vector_popFront(Vector* v, void* dest) {
   assert(v);
+  assert(dest);
 
   if (v->len == 0)
-    return NULL;
+    return -1;
 
-  uint8_t* cpy = malloc(v->el_size);
-  if (!cpy) {
-    perror("malloc() failed");
-    return NULL;
-  }
+  memcpy(dest, v->data, v->el_size);
 
   for (size_t i = 0; i < v->len - 1; ++i) {
-    uint8_t* dest = v->data + i * v->el_size;
+    uint8_t* d = v->data + i * v->el_size;
     uint8_t const* src = v->data + (i + 1) * v->el_size;
-    memcpy(dest, src, v->el_size);
+    memcpy(d, src, v->el_size);
   }
 
   v->len -= 1;
   if (v->len == v->capacity / 2) {
     if (Vector_resize(v, v->capacity / 2) == -1) {
-      free(cpy);
-      return NULL;
+      return -1;
     }
   }
 
-  return cpy;
+  return 0;
 }
 
 int Vector_resize(Vector* v, size_t size) {

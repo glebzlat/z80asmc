@@ -11,9 +11,9 @@ Vector* Vector_new(size_t elem_size);
 void Vector_destroy(Vector* v);
 
 int Vector_push(Vector* v, void const* item);
-void* Vector_pop(Vector* v);
+int Vector_pop(Vector* v, void* dest);
 int Vector_pushFront(Vector* v, void const* item);
-void* Vector_popFront(Vector* v);
+int Vector_popFront(Vector* v, void* dest);
 int Vector_resize(Vector* v, size_t size);
 
 void* Vector_at(Vector* v, size_t idx);

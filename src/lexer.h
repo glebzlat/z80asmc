@@ -32,6 +32,8 @@ typedef enum {
   TOKEN_TILDE,
   TOKEN_AMPERSAND,
   TOKEN_BAR,
+  TOKEN_LEFT_SHIFT,
+  TOKEN_RIGHT_SHIFT,
   TOKEN_DOUBLE_AMPERSAND,
   TOKEN_DOUBLE_BAR,
   TOKEN_BANG,
@@ -48,6 +50,7 @@ typedef struct {
   size_t line;
   size_t col;
   TokenType type;
+  bool unary;  //< Used by ExprParser
 } Token;
 
 typedef struct {

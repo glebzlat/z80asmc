@@ -4,17 +4,24 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(z80asmc LANGUAGES C)
 
-set(SOURCES
-    src/main.c
+option(Z80ASMC_TESTING "Compile and run tests" OFF)
+
+set(TESTING_SOURCES
     src/lexer.c
     src/parser.c
     src/utility.c
     src/vector.c
+    src/expression.c
 )
 
 set(INCLUDE_DIRECTORIES
     src
 )
+
+list(TRANSFORM TESTING_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+list(TRANSFORM INCLUDE_DIRECTORIES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+set(SOURCES src/main.c ${TESTING_SOURCES})
 
 set(COMPILE_OPTIONS
     -Wall
@@ -45,6 +52,10 @@ target_link_options(${PROJECT_NAME} PUBLIC ${LINK_OPTIONS})
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 99)
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD_REQUIRED ON)
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_EXTENSIONS OFF)
+
+if (Z80ASMC_TESTING)
+    add_subdirectory(test)
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     find_program(CMAKE_C_CPPCHECK cppcheck)
