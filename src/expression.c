@@ -1,22 +1,16 @@
 #include <assert.h>
 
 #include "expression.h"
+#include "lexer.h"
 #include "utility.h"
-
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wswitch-enum"
 
 static bool isTerm(Token const* tok);
 static bool isOp(Token const* tok);
 static int prec(Token const* tok);
 
-static inline Token const* top(Vector const* v) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+static inline Token const* top(Vector* v) {
   assert(!Vector_isEmpty(v));
-  return Vector_at(v, Vector_len(v) - 1);
-#pragma GCC diagnostic pop
+  return Vector_at((Vector*)v, Vector_len(v) - 1);
 }
 
 static inline void error(ExprParser* p, char const* reason, Token tok) {
@@ -117,6 +111,34 @@ static bool isTerm(Token const* tok) {
   case TOKEN_CHAR:
   case TOKEN_ID:
     return true;
+  case TOKEN_UNINITIALIZED:
+  case TOKEN_END:
+  case TOKEN_ERROR:
+  case TOKEN_STRING:
+  case TOKEN_LEFT_PAREN:
+  case TOKEN_RIGHT_PAREN:
+  case TOKEN_LEFT_BRACE:
+  case TOKEN_RIGHT_BRACE:
+  case TOKEN_COMMA:
+  case TOKEN_MINUS:
+  case TOKEN_PLUS:
+  case TOKEN_SLASH:
+  case TOKEN_STAR:
+  case TOKEN_PERCENT:
+  case TOKEN_CAP:
+  case TOKEN_TILDE:
+  case TOKEN_AMPERSAND:
+  case TOKEN_BAR:
+  case TOKEN_LEFT_SHIFT:
+  case TOKEN_RIGHT_SHIFT:
+  case TOKEN_DOUBLE_AMPERSAND:
+  case TOKEN_DOUBLE_BAR:
+  case TOKEN_BANG:
+  case TOKEN_BANG_EQUAL:
+  case TOKEN_EQUAL_EQUAL:
+  case TOKEN_GREATER_EQUAL:
+  case TOKEN_LESS_EQUAL:
+  case TOKEN_NEWLINE:
   default:
     return false;
   }
@@ -141,6 +163,24 @@ static bool isOp(Token const* tok) {
   case TOKEN_GREATER_EQUAL:
   case TOKEN_LESS_EQUAL:
     return true;
+  case TOKEN_UNINITIALIZED:
+  case TOKEN_END:
+  case TOKEN_ERROR:
+  case TOKEN_ID:
+  case TOKEN_CHAR:
+  case TOKEN_STRING:
+  case TOKEN_DECIMAL:
+  case TOKEN_HEXADECIMAL:
+  case TOKEN_OCTAL:
+  case TOKEN_BINARY:
+  case TOKEN_LEFT_PAREN:
+  case TOKEN_RIGHT_PAREN:
+  case TOKEN_LEFT_BRACE:
+  case TOKEN_RIGHT_BRACE:
+  case TOKEN_COMMA:
+  case TOKEN_LEFT_SHIFT:
+  case TOKEN_RIGHT_SHIFT:
+  case TOKEN_NEWLINE:
   default:
     return false;
   }
@@ -179,6 +219,20 @@ static int prec(Token const* tok) {
   case TOKEN_BANG:
   case TOKEN_TILDE:
     return 110;
+  case TOKEN_UNINITIALIZED:
+  case TOKEN_END:
+  case TOKEN_ERROR:
+  case TOKEN_ID:
+  case TOKEN_CHAR:
+  case TOKEN_STRING:
+  case TOKEN_DECIMAL:
+  case TOKEN_HEXADECIMAL:
+  case TOKEN_OCTAL:
+  case TOKEN_BINARY:
+  case TOKEN_LEFT_PAREN:
+  case TOKEN_RIGHT_PAREN:
+  case TOKEN_COMMA:
+  case TOKEN_NEWLINE:
   default:
     return 0;
   }
