@@ -40,6 +40,12 @@ int main(void) {
     tests_failed += testExpression("1+2*3", 5, t1, t2, t3, t4, t5);
   }
 
+  {
+    ClueToken t1 = {.lit = "1"}, t2 = {.lit = "2"}, t3 = {.type = TOKEN_PLUS}, t4 = {.lit = "3"},
+              t5 = {.type = TOKEN_STAR};
+    tests_failed += testExpression("(1+2)*3", 5, t1, t2, t3, t4, t5);
+  }
+
   return tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
