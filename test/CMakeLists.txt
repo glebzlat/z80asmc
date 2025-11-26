@@ -7,6 +7,11 @@ target_include_directories(TestExpressionPositive PRIVATE ${INCLUDE_DIRECTORIES}
 target_compile_options(TestExpressionPositive PRIVATE ${COMPILE_OPTIONS})
 add_test(NAME TestExpressionPositive COMMAND TestExpressionPositive)
 
+add_executable(TestExpressionNegative test_expression_negative.c ${TESTING_SOURCES})
+target_include_directories(TestExpressionNegative PRIVATE ${INCLUDE_DIRECTORIES})
+target_compile_options(TestExpressionNegative PRIVATE ${COMPILE_OPTIONS})
+add_test(NAME TestExpressionNegative COMMAND TestExpressionNegative)
+
 add_custom_target(RunTests
     ctest --verbose --progress --output-on-failure --timeout 1
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

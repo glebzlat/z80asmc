@@ -5,17 +5,7 @@
 #include <expression.h>
 #include <lexer.h>
 
-#define STRINGIZE(EXP) #EXP
-
-#define CHECK(ASSERTION)                                                                                               \
-  do {                                                                                                                 \
-    if (ASSERTION)                                                                                                     \
-      ;                                                                                                                \
-    else {                                                                                                             \
-      fprintf(stderr, "%s:%i: Check " STRINGIZE(#ASSERTION) " failed\n", __FILE__, __LINE__);                          \
-      return 1;                                                                                                        \
-    }                                                                                                                  \
-  } while (0)
+#include "common.h"
 
 typedef struct {
   char const* lit;
@@ -107,7 +97,7 @@ int testExpression(char const* input, size_t n_tokens, ...) {
 
     if (ExprParser_get(&parser, tok) == -1) {
       char* tok_str = Token_format(&parser.error.tok);
-      fprintf(stderr, "ExprParser_get failed: %s : %s\n", parser.error.reason, tok_str);
+      fprintf(stderr, "ExprParser_get failed: %s : %s\n", ExprErrorType_toStr(parser.error.type), tok_str);
       free(tok_str);
       return 1;
     }
@@ -123,7 +113,7 @@ int testExpression(char const* input, size_t n_tokens, ...) {
   }
   printf("\n");
 
-  CHECK(Vector_len(parser.e) == n_tokens);
+  CHECK(Vector_len(parser.e) == n_tokens, NULL);
 
   va_list ap;
   va_start(ap, n_tokens);
@@ -132,10 +122,10 @@ int testExpression(char const* input, size_t n_tokens, ...) {
     ClueToken clue = va_arg(ap, ClueToken);
 
     if (clue.type)
-      CHECK(tok->type == clue.type);
+      CHECK(tok->type == clue.type, NULL);
     if (clue.lit)
-      CHECK(strncasecmp(tok->value, clue.lit, tok->len) == 0);
-    CHECK(tok->unary == clue.unary);
+      CHECK(strncasecmp(tok->value, clue.lit, tok->len) == 0, NULL);
+    CHECK(tok->unary == clue.unary, NULL);
   }
   va_end(ap);
 
