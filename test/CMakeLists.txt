@@ -2,10 +2,10 @@ enable_testing()
 
 include(CTest)
 
-add_executable(TestExpression test_expression.c ${TESTING_SOURCES})
-target_include_directories(TestExpression PRIVATE ${INCLUDE_DIRECTORIES})
-target_compile_options(TestExpression PRIVATE ${COMPILE_OPTIONS})
-add_test(NAME TestExpression COMMAND TestExpression)
+add_executable(TestExpressionPositive test_expression_positive.c ${TESTING_SOURCES})
+target_include_directories(TestExpressionPositive PRIVATE ${INCLUDE_DIRECTORIES})
+target_compile_options(TestExpressionPositive PRIVATE ${COMPILE_OPTIONS})
+add_test(NAME TestExpressionPositive COMMAND TestExpressionPositive)
 
 add_custom_target(RunTests
     ctest --verbose --progress --output-on-failure --timeout 1
