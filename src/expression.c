@@ -13,8 +13,8 @@ static inline Token const* top(Vector* v) {
   return Vector_at((Vector*)v, Vector_len(v) - 1);
 }
 
-static inline void error(ExprParser* p, char const* reason, Token tok) {
-  p->error = (ExprError){.reason = reason, .tok = tok};
+static inline void error(ExprParser* p, ExprErrorType type, Token tok) {
+  p->error = (ExprError){.type = type, .tok = tok};
   p->has_error = true;
 }
 
@@ -47,7 +47,7 @@ int ExprParser_get(ExprParser* p, Token tok) {
   } else if (isOp(&tok)) {
     if (prev->type == TOKEN_UNINITIALIZED || isOp(prev) || prev->type == TOKEN_LEFT_PAREN) {
       if (tok.type != TOKEN_PLUS && tok.type != TOKEN_MINUS && tok.type != TOKEN_BANG && tok.type != TOKEN_TILDE) {
-        error(p, "operator can't be unary", tok);
+        error(p, EXPR_ERROR_WRONG_UNARY_OP, tok);
         return -1;
       }
       tok.unary = true;
@@ -71,7 +71,7 @@ int ExprParser_get(ExprParser* p, Token tok) {
   } else if (tok.type == TOKEN_RIGHT_PAREN) {
     while (true) {
       if (Vector_isEmpty(p->o)) {
-        error(p, "unbalanced left paren", tok);
+        error(p, EXPR_ERROR_UNBALANCED_RIGHT_PAREN, tok);
         return -1;
       }
       if (top(p->o)->type == TOKEN_LEFT_PAREN) {
@@ -87,7 +87,7 @@ int ExprParser_get(ExprParser* p, Token tok) {
   else if (tok.type == TOKEN_END) {
     while (!Vector_isEmpty(p->o)) {
       if (top(p->o)->type == TOKEN_LEFT_PAREN) {
-        error(p, "unbalanced left paren", tok);
+        error(p, EXPR_ERROR_UNBALANCED_LEFT_PAREN, tok);
         return -1;
       }
       Token tmp;
@@ -99,13 +99,30 @@ int ExprParser_get(ExprParser* p, Token tok) {
   }
 
   else {
-    error(p, "unexpected token", tok);
+    error(p, EXPR_ERROR_UNEXPECTED_TOKEN, tok);
     return -1;
   }
 
   p->prev = tok;
 
   return 0;
+}
+
+char const* ExprErrorType_toStr(ExprErrorType type) {
+  switch (type) {
+  case EXPR_NO_ERROR:
+    return "EXPR_NO_ERROR";
+  case EXPR_ERROR_WRONG_UNARY_OP:
+    return "operator can't be used as unary";
+  case EXPR_ERROR_UNBALANCED_LEFT_PAREN:
+    return "unbalanced left parenthesis";
+  case EXPR_ERROR_UNBALANCED_RIGHT_PAREN:
+    return "unbalanced right parenthesis";
+  case EXPR_ERROR_UNEXPECTED_TOKEN:
+    return "unexpected token";
+  default:
+    return NULL;
+  }
 }
 
 static bool isTerm(Token const* tok) {

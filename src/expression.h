@@ -6,9 +6,17 @@
 #include "lexer.h"
 #include "vector.h"
 
+typedef enum {
+  EXPR_NO_ERROR = 0,
+  EXPR_ERROR_WRONG_UNARY_OP,
+  EXPR_ERROR_UNBALANCED_LEFT_PAREN,
+  EXPR_ERROR_UNBALANCED_RIGHT_PAREN,
+  EXPR_ERROR_UNEXPECTED_TOKEN,
+} ExprErrorType;
+
 typedef struct {
-  char const* reason;
   Token tok;
+  ExprErrorType type;
 } ExprError;
 
 typedef struct {
@@ -23,5 +31,7 @@ ExprParser ExprParser_make(void);
 void ExprParser_deinit(ExprParser* p);
 
 int ExprParser_get(ExprParser* p, Token tok);
+
+char const* ExprErrorType_toStr(ExprErrorType type);
 
 #endif // EXPRESSION_H
