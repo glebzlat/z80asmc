@@ -200,7 +200,7 @@ Token Lexer_next(Lexer* lex) {
   case '~':
     return makeToken(lex, TOKEN_TILDE);
   case '&':
-    if (matchChar(lex, '|'))
+    if (matchChar(lex, '&'))
       return makeToken(lex, TOKEN_DOUBLE_AMPERSAND);
     return makeToken(lex, TOKEN_AMPERSAND);
   case '|':
@@ -253,7 +253,8 @@ Token Lexer_next(Lexer* lex) {
     return makeToken(lex, TOKEN_NEWLINE);
   }
 
-  return (Token){0};
+  // return (Token){0};
+  return makeErrorToken(lex, "unknown token");
 }
 
 char* Lexer_line(Lexer* lex, size_t line) {
@@ -488,7 +489,7 @@ static Token parseString(Lexer* lex) {
   size_t col = lex->cur - lex->bol;
   while (true) {
     tok = parseChar(lex);
-    if (tok.type == TOKEN_CHAR && tok.value[tok.len] == '"' || tok.type == TOKEN_ERROR)
+    if ((tok.type == TOKEN_CHAR && tok.value[tok.len] == '"') || tok.type == TOKEN_ERROR)
       break;
   }
   tok.col = col;

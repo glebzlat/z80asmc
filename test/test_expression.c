@@ -66,10 +66,34 @@ int main(void) {
     tests_failed += testExpression("0x01", 1, t1);
   }
 
-  // { // XXX: fails
-  //   ClueToken t1 = {.lit = "01"};
-  //   tests_failed += testExpression("01", 1, t1);
-  // }
+  {
+    ClueToken t1 = {.lit = "a"}, t2 = {.type = TOKEN_BANG, .unary = true};
+    tests_failed += testExpression("!a", 2, t1, t2);
+  }
+
+  {
+    // a ! b && c d && ||
+    ClueToken t1 = {.lit = "a"}, t2 = {.type = TOKEN_BANG, .unary = true}, t3 = {.lit = "b"},
+              t4 = {.type = TOKEN_DOUBLE_AMPERSAND}, t5 = {.lit = "c"}, t6 = {.lit = "d"},
+              t7 = {.type = TOKEN_DOUBLE_AMPERSAND}, t8 = {.type = TOKEN_DOUBLE_BAR};
+    tests_failed += testExpression("!a && b || c && d", 8, t1, t2, t3, t4, t5, t6, t7, t8);
+  }
+
+  {
+    // a b << c > d ==
+    ClueToken t1 = {.lit = "a"}, t2 = {.lit = "b"}, t3 = {.type = TOKEN_LEFT_SHIFT},
+              t4 = {.lit = "c"}, t5 = {.type = TOKEN_RIGHT_BRACE}, t6 = {.lit = "d"},
+              t7 = {.type = TOKEN_EQUAL_EQUAL};
+    tests_failed += testExpression("a << b > c == d", 7, t1, t2, t3, t4, t5, t6, t7);
+  }
+
+  {
+    // a b == c != d ==
+    ClueToken t1 = {.lit = "a"}, t2 = {.lit = "b"}, t3 = {.type = TOKEN_EQUAL_EQUAL},
+              t4 = {.lit = "c"}, t5 = {.type = TOKEN_BANG_EQUAL}, t6 = {.lit = "d"},
+              t7 = {.type = TOKEN_EQUAL_EQUAL};
+    tests_failed += testExpression("a == b != c == d", 7, t1, t2, t3, t4, t5, t6, t7);
+  }
 
   return tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

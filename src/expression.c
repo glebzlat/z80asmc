@@ -46,7 +46,7 @@ int ExprParser_get(ExprParser* p, Token tok) {
 
   } else if (isOp(&tok)) {
     if (prev->type == TOKEN_UNINITIALIZED || isOp(prev) || prev->type == TOKEN_LEFT_PAREN) {
-      if (tok.type != TOKEN_PLUS && tok.type != TOKEN_MINUS) {
+      if (tok.type != TOKEN_PLUS && tok.type != TOKEN_MINUS && tok.type != TOKEN_BANG && tok.type != TOKEN_TILDE) {
         error(p, "operator can't be unary", tok);
         return -1;
       }
@@ -168,6 +168,10 @@ static bool isOp(Token const* tok) {
   case TOKEN_EQUAL_EQUAL:
   case TOKEN_GREATER_EQUAL:
   case TOKEN_LESS_EQUAL:
+  case TOKEN_LEFT_SHIFT:
+  case TOKEN_RIGHT_SHIFT:
+  case TOKEN_LEFT_BRACE:
+  case TOKEN_RIGHT_BRACE:
     return true;
   case TOKEN_UNINITIALIZED:
   case TOKEN_END:
@@ -181,11 +185,7 @@ static bool isOp(Token const* tok) {
   case TOKEN_BINARY:
   case TOKEN_LEFT_PAREN:
   case TOKEN_RIGHT_PAREN:
-  case TOKEN_LEFT_BRACE:
-  case TOKEN_RIGHT_BRACE:
   case TOKEN_COMMA:
-  case TOKEN_LEFT_SHIFT:
-  case TOKEN_RIGHT_SHIFT:
   case TOKEN_NEWLINE:
   default:
     return false;
