@@ -42,7 +42,8 @@ static Result comma(Parser* p);
 
 static void advance(Parser* p);
 static void skip(Parser* p);
-static int parseInstruction(Parser* p);
+static void parseLabel(Parser* p);
+static void parseInstruction(Parser* p);
 
 static void error(Parser* p, const char* fmt, ...);
 
@@ -92,7 +93,12 @@ static inline bool match_discard(Parser* p, Result r) {
 void Parser_parse(Parser* p) {
   assert(p);
 
-  while (parseInstruction(p)) {
+  while (true) {
+    parseLabel(p);
+    parseInstruction(p);
+    if (p->buf[p->ptr].type == TOKEN_END)
+      break;
+
     p->ptr = 0;
     for (size_t i = 1; i < TOKEN_BUF_LEN && p->buf[i].type != TOKEN_UNINITIALIZED; ++i)
       p->buf[i].type = TOKEN_UNINITIALIZED;
@@ -173,12 +179,36 @@ void advance(Parser* p) {
 }
 
 void skip(Parser* p) {
+  /* Check whether the newline or END is already consumed. It is required due
+   * to parseLabel function: it tries to consume two tokens: an ID and a colon,
+   * and backtracks if the tokens don't match. */
+  for (size_t i = p->ptr; i < TOKEN_BUF_LEN; ++i)
+    if (p->buf[i].type == TOKEN_NEWLINE || p->buf[i].type == TOKEN_END)
+      return;
   Token tok = p->buf[p->ptr];
   while (tok.type != TOKEN_NEWLINE && tok.type != TOKEN_END)
     tok = Lexer_next(p->lex);
 }
 
-int parseInstruction(Parser* p) {
+static void parseLabel(Parser* p) {
+  advance(p);
+  if (p->buf[p->ptr].type != TOKEN_ID) {
+    p->ptr -= 1;
+    return;
+  }
+  advance(p);
+  if (p->buf[p->ptr].type != TOKEN_COLON) {
+    p->ptr -= 2;
+    return;
+  }
+
+  /* XXX: printf for now, add a map label_name -> addr later */
+  char* tokstr = Token_format(&p->buf[p->ptr - 1]);
+  printf("parseLabel(): %s\n", tokstr);
+  free(tokstr);
+}
+
+void parseInstruction(Parser* p) {
   size_t n_results = 0, n_results_save = 0, ptr_save = 0;
   Result results[SAVED_RESULTS_LEN] = {0};
 
@@ -206,10 +236,10 @@ int parseInstruction(Parser* p) {
 
   advance(p);
   if (p->buf[p->ptr].type == TOKEN_END)
-    return 0;
+    return;
 
   if (p->buf[p->ptr].type == TOKEN_NEWLINE)
-    return 1;
+    return;
 
   if (tokenId(p, "ld").success) {
     advance(p);
@@ -237,7 +267,7 @@ int parseInstruction(Parser* p) {
   }
 
 error:
-  return 1;
+  return;
 
 success:
   printf("success\n");
@@ -245,7 +275,7 @@ success:
 #undef ALT
 #undef MATCH_SAVE
 #undef MATCH
-  return 1;
+  return;
 }
 
 static void error(Parser* p, const char* fmt, ...) {

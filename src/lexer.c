@@ -9,12 +9,6 @@
 #include "lexer.h"
 #include "utility.h"
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wswitch-enum"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif
-
 static bool isAtEnd(Lexer* lex);
 static char peek(Lexer* lex);
 static char advance(Lexer* lex);
@@ -120,6 +114,8 @@ char const* TokenType_str(TokenType type) {
     return "TOKEN_LEFT_SHIFT";
   case TOKEN_RIGHT_SHIFT:
     return "TOKEN_RIGHT_SHIFT";
+  case TOKEN_COLON:
+    return "TOKEN_COLON";
   default:
     die("TokenType_str: unknown token type");
   }
@@ -146,6 +142,36 @@ unsigned long Token_toInt(Token* tok) {
   case TOKEN_CHAR:
     value = escToInt(tok->value);
     break;
+  case TOKEN_UNINITIALIZED:
+  case TOKEN_END:
+  case TOKEN_ERROR:
+  case TOKEN_ID:
+  case TOKEN_STRING:
+  case TOKEN_LEFT_PAREN:
+  case TOKEN_RIGHT_PAREN:
+  case TOKEN_LEFT_BRACE:
+  case TOKEN_RIGHT_BRACE:
+  case TOKEN_COMMA:
+  case TOKEN_MINUS:
+  case TOKEN_PLUS:
+  case TOKEN_SLASH:
+  case TOKEN_STAR:
+  case TOKEN_PERCENT:
+  case TOKEN_CAP:
+  case TOKEN_TILDE:
+  case TOKEN_AMPERSAND:
+  case TOKEN_BAR:
+  case TOKEN_LEFT_SHIFT:
+  case TOKEN_RIGHT_SHIFT:
+  case TOKEN_DOUBLE_AMPERSAND:
+  case TOKEN_DOUBLE_BAR:
+  case TOKEN_BANG:
+  case TOKEN_BANG_EQUAL:
+  case TOKEN_EQUAL_EQUAL:
+  case TOKEN_GREATER_EQUAL:
+  case TOKEN_LESS_EQUAL:
+  case TOKEN_COLON:
+  case TOKEN_NEWLINE:
   default:
     die("Token_toInt(): could not convert to integer");
   }
@@ -249,11 +275,12 @@ Token Lexer_next(Lexer* lex) {
       }
     }
     return result;
+  case ':':
+    return makeToken(lex, TOKEN_COLON);
   case '\n':
     return makeToken(lex, TOKEN_NEWLINE);
   }
 
-  // return (Token){0};
   return makeErrorToken(lex, "unknown token");
 }
 
