@@ -162,6 +162,7 @@ static bool isTerm(Token const* tok) {
   case TOKEN_GREATER_EQUAL:
   case TOKEN_LESS_EQUAL:
   case TOKEN_NEWLINE:
+  case TOKEN_COLON:
   default:
     return false;
   }
@@ -204,6 +205,7 @@ static bool isOp(Token const* tok) {
   case TOKEN_RIGHT_PAREN:
   case TOKEN_COMMA:
   case TOKEN_NEWLINE:
+  case TOKEN_COLON:
   default:
     return false;
   }
@@ -256,6 +258,7 @@ static int prec(Token const* tok) {
   case TOKEN_RIGHT_PAREN:
   case TOKEN_COMMA:
   case TOKEN_NEWLINE:
+  case TOKEN_COLON:
   default:
     return 0;
   }
