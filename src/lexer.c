@@ -44,6 +44,19 @@ char* Token_format(Token* tok) {
   return buf;
 }
 
+char* Token_str(Token* tok) {
+  assert(tok);
+
+  char* str = malloc(tok->len + 1);
+  if (!str)
+    die("malloc() failed");
+
+  strncpy(str, tok->value, tok->len);
+  str[tok->len] = '\0';
+
+  return str;
+}
+
 char const* TokenType_str(TokenType type) {
   switch (type) {
   case TOKEN_UNINITIALIZED:

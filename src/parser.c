@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "lexer.h"
+#include "map.h"
 #include "parser.h"
 #include "utility.h"
 #include "vector.h"
@@ -54,9 +55,14 @@ Parser Parser_make(Lexer* lex) {
   if (!errors)
     die("Vector_new() failed");
 
+  Map* labels = Map_new(sizeof(int32_t));
+  if (!labels)
+    die("Map_new() failed");
+
   return (Parser){
       .lex = lex,
       .errors = errors,
+      .labels = labels,
   };
 }
 
@@ -70,7 +76,13 @@ void Parser_deinit(Parser* p) {
       free(err->line);
   }
 
+  MapIter it = MapIter_init(p->labels);
+  while (MapIter_next(&it)) {
+    printf("Label %s\n", it.key);
+  }
+
   Vector_destroy(p->errors);
+  Map_destroy(p->labels);
 }
 
 static inline bool match_save(Parser* p, Result r, size_t* n_results, Result arr[]) {
@@ -202,10 +214,11 @@ static void parseLabel(Parser* p) {
     return;
   }
 
-  /* XXX: printf for now, add a map label_name -> addr later */
-  char* tokstr = Token_format(&p->buf[p->ptr - 1]);
-  printf("parseLabel(): %s\n", tokstr);
-  free(tokstr);
+  Token* label_tok = &p->buf[p->ptr - 1];
+  char* label_name = Token_str(label_tok);
+  Label label = {.line = label_tok->line};
+  Map_set(p->labels, label_name, &label);
+  free(label_name);
 }
 
 void parseInstruction(Parser* p) {
