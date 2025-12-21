@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "instruction.h"
 #include "lexer.h"
 #include "map.h"
 #include "parser.h"
@@ -48,6 +49,8 @@ static void parseInstruction(Parser* p);
 
 static void error(Parser* p, const char* fmt, ...);
 
+static void map_destroy_ir_label(void* value);
+
 Parser Parser_make(Lexer* lex) {
   assert(lex);
 
@@ -55,14 +58,19 @@ Parser Parser_make(Lexer* lex) {
   if (!errors)
     die("Vector_new() failed");
 
-  Map* labels = Map_new(sizeof(int32_t));
+  Map* labels = Map_new(sizeof(int32_t), map_destroy_ir_label);
   if (!labels)
     die("Map_new() failed");
+
+  Vector* nodes = Vector_new(sizeof(IRNode));
+  if (!nodes)
+    die("Vector_new() failed");
 
   return (Parser){
       .lex = lex,
       .errors = errors,
       .labels = labels,
+      .nodes = nodes,
   };
 }
 
@@ -83,6 +91,15 @@ void Parser_deinit(Parser* p) {
 
   Vector_destroy(p->errors);
   Map_destroy(p->labels);
+
+  for (size_t i = 0; i < Vector_len(p->nodes); ++i) {
+    IRNode* n = Vector_at(p->nodes, i);
+    if (n->kind == IR_INSTRUCTION)
+      Vector_destroy(n->data.instruction.encoded_items);
+    else if (n->kind == IR_LABEL)
+      free(n->data.label.name);
+  }
+  Vector_destroy(p->nodes);
 }
 
 static inline bool match_save(Parser* p, Result r, size_t* n_results, Result arr[]) {
@@ -215,10 +232,17 @@ static void parseLabel(Parser* p) {
   }
 
   Token* label_tok = &p->buf[p->ptr - 1];
+
   char* label_name = Token_str(label_tok);
-  Label label = {.line = label_tok->line};
-  Map_set(p->labels, label_name, &label);
-  free(label_name);
+  if (!label_name)
+    die("Token_str() failed");
+
+  IRNode node = {
+      .kind = IR_LABEL,
+      .data = {.label = {.name = label_name, .line = label_tok->line}},
+  };
+  Vector_push(p->nodes, &node);
+  Map_set(p->labels, node.data.label.name, &node.data.label);
 }
 
 void parseInstruction(Parser* p) {
@@ -256,10 +280,14 @@ void parseInstruction(Parser* p) {
 
   if (tokenId(p, "ld").success) {
     advance(p);
-    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(reg8Bit(p)),
-        { printf("ld R R: r1=%i r2=%i\n", results[0].value.val, results[1].value.val); });
-    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(int8Bit(p)),
-        { printf("ld R N: r=%i, n=%i\n", results[0].value.val, results[1].value.val); });
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(reg8Bit(p)), {
+      IRNode node = IRNode_createInstruction("bb", results[0].value.val, results[1].value.val);
+      Vector_push(p->nodes, &node);
+    });
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(int8Bit(p)), {
+      IRNode node = IRNode_createInstruction("bb", results[0].value.val, results[1].value.val);
+      Vector_push(p->nodes, &node);
+    });
     error(p, "wrong operands to instruction");
     skip(p);
     goto error;
@@ -312,3 +340,5 @@ static void error(Parser* p, const char* fmt, ...) {
 
   Vector_push(p->errors, &e);
 }
+
+static void map_destroy_ir_label(void* value) {}

@@ -17,7 +17,7 @@ typedef enum {
 } MapEntryType;
 
 typedef struct {
-  char* key;
+  char const* key;
   void* value;
   uint64_t hash;
   MapEntryType type;
@@ -25,6 +25,7 @@ typedef struct {
 
 struct Map {
   MapEntry* entries;
+  Map_value_destructor_fn dtor;
   size_t capacity;
   size_t len;
   size_t key_size;
@@ -33,14 +34,16 @@ struct Map {
 
 static int Map_expand(Map* m);
 static int Map_shrink(Map* m);
-static void* Map_setEntry(Map* m, void const* key, void const* value);
+static void* Map_setEntry(Map* m, void const* key, void* value);
 
-static int MapEntry_set(MapEntry* e, char const* key, void const* value, size_t value_size, uint64_t hash);
-static void MapEntry_del(MapEntry* e);
+static int MapEntry_set(MapEntry* e, char const* key, void* value, uint64_t hash);
+static void MapEntry_del(MapEntry* e, Map_value_destructor_fn dtor);
 
 static uint64_t fnv1a(char const* s);
 
-Map* Map_new(size_t value_size) {
+Map* Map_new(size_t value_size, Map_value_destructor_fn dtor) {
+  assert(dtor);
+
   Map* m = malloc(sizeof(*m));
   if (!m) {
     perror("malloc() failed");
@@ -50,6 +53,7 @@ Map* Map_new(size_t value_size) {
   m->len = 0;
   m->capacity = MAP_INITIAL_CAPACITY;
   m->value_size = value_size;
+  m->dtor = dtor;
 
   m->entries = calloc(m->capacity, sizeof(MapEntry));
   if (!m->entries) {
@@ -64,16 +68,14 @@ Map* Map_new(size_t value_size) {
 void Map_destroy(Map* m) {
   assert(m);
 
-  for (size_t i = 0; i < m->capacity; ++i) {
-    free(m->entries[i].key);
-    free(m->entries[i].value);
-  }
+  for (size_t i = 0; i < m->capacity; ++i)
+    m->dtor(m->entries[i].value);
 
   free(m->entries);
   free(m);
 }
 
-void* Map_set(Map* m, char const* key, void const* value) {
+void* Map_set(Map* m, char const* key, void* value) {
   assert(m);
   assert(key);
   assert(value);
@@ -116,7 +118,7 @@ int Map_del(Map* m, char const* key) {
 
   while (m->entries[idx].type == ENTRY_VALUE) {
     if (strcmp(m->entries[idx].key, key) == 0) {
-      MapEntry_del(&m->entries[idx]);
+      MapEntry_del(&m->entries[idx], m->dtor);
       return 0;
     }
   }
@@ -198,19 +200,19 @@ static int Map_shrink(Map* m) {
   return 0;
 }
 
-static void* Map_setEntry(Map* m, void const* key, void const* value) {
+static void* Map_setEntry(Map* m, void const* key, void* value) {
   uint64_t hash = fnv1a(key);
   size_t idx = (size_t)(hash & (m->capacity - 1));
 
   while (m->entries[idx].type != ENTRY_UNINITIALIZED) {
     if (m->entries[idx].type == ENTRY_DELETED) {
-      if (MapEntry_set(&m->entries[idx], key, value, m->value_size, hash) == -1)
+      if (MapEntry_set(&m->entries[idx], key, value, hash) == -1)
         return NULL;
       break;
     }
 
     if (m->entries[idx].type == ENTRY_VALUE && strcmp(m->entries[idx].key, key) == 0) {
-      free(m->entries[idx].value);
+      m->dtor(m->entries[idx].value);
       memcpy(m->entries[idx].value, value, m->value_size);
       break;
     }
@@ -220,7 +222,7 @@ static void* Map_setEntry(Map* m, void const* key, void const* value) {
       idx = 0;
   }
 
-  if (MapEntry_set(&m->entries[idx], key, value, m->value_size, hash) == -1)
+  if (MapEntry_set(&m->entries[idx], key, value, hash) == -1)
     return NULL;
 
   m->len += 1;
@@ -228,33 +230,16 @@ static void* Map_setEntry(Map* m, void const* key, void const* value) {
   return m->entries[idx].value;
 }
 
-static int MapEntry_set(MapEntry* e, char const* key, void const* value, size_t value_size, uint64_t hash) {
-  size_t key_len = strlen(key);
-  e->key = malloc(key_len + 1);
-  if (!e->key) {
-    perror("malloc() failed");
-    return -1;
-  }
-  strcpy(e->key, key);
-  e->key[key_len] = '\0';
-
-  e->value = malloc(value_size);
-  if (!e->value) {
-    perror("malloc() failed");
-    free(e->key);
-    return -1;
-  }
-  memcpy(e->value, value, value_size);
-
+static int MapEntry_set(MapEntry* e, char const* key, void* value, uint64_t hash) {
+  e->key = key;
+  e->value = value;
   e->hash = hash;
   e->type = ENTRY_VALUE;
-
   return 0;
 }
 
-static void MapEntry_del(MapEntry* e) {
-  free(e->key);
-  free(e->value);
+static void MapEntry_del(MapEntry* e, Map_value_destructor_fn dtor) {
+  dtor(e->value);
   e->key = NULL;
   e->value = NULL;
   e->type = ENTRY_DELETED;

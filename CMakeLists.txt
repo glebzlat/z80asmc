@@ -12,6 +12,8 @@ set(TESTING_SOURCES
     src/utility.c
     src/vector.c
     src/expression.c
+    src/map.c
+    src/instruction.c
 )
 
 set(INCLUDE_DIRECTORIES

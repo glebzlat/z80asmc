@@ -16,6 +16,7 @@ typedef struct {
   bool error;
   Vector* errors;
   Map* labels;
+  Vector* nodes;
 } Parser;
 
 typedef struct {
@@ -24,12 +25,6 @@ typedef struct {
   size_t col;
   size_t lineno;
 } ParserError;
-
-typedef struct {
-  size_t line;
-  size_t addr;
-  bool has_addr;
-} Label;
 
 Parser Parser_make(Lexer* lex);
 void Parser_deinit(Parser* p);

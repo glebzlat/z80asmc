@@ -8,17 +8,19 @@
 typedef struct Map Map;
 typedef struct MapIter MapIter;
 
+typedef void(*Map_value_destructor_fn)(void*);
+
 struct MapIter {
   Map* m;
-  char* key;
+  char const* key;
   void* value;
   size_t idx;
 };
 
-Map* Map_new(size_t value_size);
+Map* Map_new(size_t value_size, Map_value_destructor_fn dtor);
 void Map_destroy(Map* m);
 
-void* Map_set(Map* m, char const* key, void const* value);
+void* Map_set(Map* m, char const* key, void* value);
 void* Map_setCopy(Map* m, char const* key, void const* value);
 void* Map_get(Map const* m, char const* key);
 int Map_del(Map* m, char const* key);
