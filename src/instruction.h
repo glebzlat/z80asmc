@@ -2,12 +2,12 @@
 #define INSTRUCTION_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "vector.h"
 
 typedef enum {
   EI_BYTE,
-  EI_WORD,
   EI_EXPR,
 } EncodedItemKind;
 
@@ -20,7 +20,6 @@ typedef struct {
   EncodedItemKind kind;
   union {
     uint8_t byte;
-    uint16_t word;
     Vector* expr;
   } data;
 } EncodedItem;
@@ -32,7 +31,7 @@ typedef struct {
 typedef struct {
   char* name;
   size_t line;
-  size_t addr;
+  uint16_t addr;
   bool has_addr;
 } IRLabel;
 
@@ -58,5 +57,7 @@ typedef struct {
  *   - e: expression (Vector[Token])
  */
 IRNode IRNode_createInstruction(char const* fmt, ...);
+
+void IRNode_print(FILE* fout, IRNode* n);
 
 #endif // INSTRUCTION_H

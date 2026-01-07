@@ -84,11 +84,6 @@ void Parser_deinit(Parser* p) {
       free(err->line);
   }
 
-  MapIter it = MapIter_init(p->labels);
-  while (MapIter_next(&it)) {
-    printf("Label %s\n", it.key);
-  }
-
   Vector_destroy(p->errors);
   Map_destroy(p->labels);
 
@@ -311,7 +306,6 @@ error:
   return;
 
 success:
-  printf("success\n");
 
 #undef ALT
 #undef MATCH_SAVE

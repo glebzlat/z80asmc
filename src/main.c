@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "instruction.h"
 #include "utility.h"
 #include "parser.h"
 
@@ -29,6 +30,14 @@ int main(int argc, char** argv) {
       ParserError_print(Vector_at(p.errors, i), stderr);
     exitcode = 1;
   }
+
+  MapIter it = MapIter_init(p.labels);
+  while (MapIter_next(&it)) {
+    printf("Label %s\n", it.key);
+  }
+
+  for (size_t i = 0; i < Vector_len(p.nodes); ++i)
+    IRNode_print(stdout, Vector_at(p.nodes, i));
 
   Parser_deinit(&p);
   fclose(fin);
