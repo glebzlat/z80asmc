@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "expression.h"
 #include "instruction.h"
 #include "lexer.h"
 #include "map.h"
@@ -20,13 +21,14 @@
 
 #define SUCCESS(VAL)                                                                                                   \
   (Result) {                                                                                                           \
-    .success = true, .value = {.val = (VAL) }                                                                          \
+    .success = true, .value = { VAL }                                                                                  \
   }
 #define FAILURE                                                                                                        \
   (Result) { .success = false }
 
-typedef struct {
-  uint8_t val;
+typedef union {
+  Vector* expr;
+  uint8_t byte;
 } Value;
 
 typedef struct {
@@ -39,10 +41,12 @@ static Result tokenTypeValue(Parser* p, TokenType type, char const* val);
 static Result tokenId(Parser* p, char const* val);
 
 static Result reg8Bit(Parser* p);
-static Result int8Bit(Parser* p);
 static Result comma(Parser* p);
+Result expression(Parser* p);
+Result address(Parser* p);
 
 static void advance(Parser* p);
+static Token peek(Parser* p);
 static void skip(Parser* p);
 static void parseLabel(Parser* p);
 static void parseInstruction(Parser* p);
@@ -157,49 +161,97 @@ Result tokenId(Parser* p, char const* val) { return tokenTypeValue(p, TOKEN_ID, 
 Result reg8Bit(Parser* p) {
 
   if (tokenId(p, "a").success)
-    return SUCCESS(0x07);
+    return SUCCESS(.byte = 0x07);
   else if (tokenId(p, "b").success)
-    return SUCCESS(0x00);
+    return SUCCESS(.byte = 0x00);
   else if (tokenId(p, "c").success)
-    return SUCCESS(0x01);
+    return SUCCESS(.byte = 0x01);
   else if (tokenId(p, "d").success)
-    return SUCCESS(0x02);
+    return SUCCESS(.byte = 0x02);
   else if (tokenId(p, "e").success)
-    return SUCCESS(0x03);
+    return SUCCESS(.byte = 0x03);
   else if (tokenId(p, "h").success)
-    return SUCCESS(0x08);
+    return SUCCESS(.byte = 0x08);
   else if (tokenId(p, "l").success)
-    return SUCCESS(0x09);
+    return SUCCESS(.byte = 0x09);
   return FAILURE;
-}
-
-Result int8Bit(Parser* p) {
-  uint64_t result;
-  Token cur = p->buf[p->ptr];
-  if (cur.type == TOKEN_DECIMAL || cur.type == TOKEN_HEXADECIMAL || cur.type == TOKEN_OCTAL ||
-      cur.type == TOKEN_BINARY || cur.type == TOKEN_CHAR)
-    result = Token_toInt(&cur);
-  else
-    return FAILURE;
-
-  if (result >= UINT8_MAX) {
-    p->error = true;
-    printf("int8Bit(): value is greater than 8 bit\n");
-    return FAILURE;
-  }
-
-  return SUCCESS((uint8_t)result);
 }
 
 Result comma(Parser* p) { return tokenType(p, TOKEN_COMMA); }
 
+Result expression(Parser* p) {
+  ExprParser ep = ExprParser_make();
+  while (true) {
+    Token tok = p->buf[p->ptr];
+    if (ExprParser_get(&ep, tok) == -1) {
+      Vector_destroy(ep.o);
+      Vector_destroy(ep.e);
+      return FAILURE;
+    }
+
+    tok = peek(p);
+    if (tok.type == TOKEN_END || tok.type == TOKEN_NEWLINE)
+      break;
+    p->ptr += 1;
+  }
+  Vector_destroy(ep.o);
+  return SUCCESS(.expr = ep.e);
+}
+
+Result address(Parser *p) {
+  ExprParser ep = ExprParser_make();
+
+  bool starts_with_paren = false, ends_with_paren = false;
+  Token prev_tok = {0};
+  while (true) {
+    Token tok = p->buf[p->ptr];
+    if (ExprParser_get(&ep, tok) == -1) {
+      Vector_destroy(ep.o);
+      Vector_destroy(ep.e);
+      return FAILURE;
+    }
+
+    if (prev_tok.type == TOKEN_UNINITIALIZED && tok.type == TOKEN_LEFT_PAREN)
+      starts_with_paren = true;
+    prev_tok = tok;
+
+    tok = peek(p);
+    if (tok.type == TOKEN_END || tok.type == TOKEN_NEWLINE) {
+      if (prev_tok.type == TOKEN_RIGHT_PAREN)
+        ends_with_paren = true;
+      break;
+    }
+    p->ptr += 1;
+  }
+
+  if (starts_with_paren && ends_with_paren) {
+    Vector_destroy(ep.o);
+    return SUCCESS(.expr = ep.e);
+  }
+
+  Vector_destroy(ep.o);
+  Vector_destroy(ep.e);
+  return FAILURE;
+}
+
 void advance(Parser* p) {
   p->ptr += 1;
+  // XXX: replace fixed length buffer with a vector to allow long backtracking
   if (p->ptr == TOKEN_BUF_LEN)
     die("advance(): token buffer is full");
   if (p->buf[p->ptr].type != TOKEN_UNINITIALIZED)
     return;
   p->buf[p->ptr] = Lexer_next(p->lex);
+}
+
+Token peek(Parser* p) {
+  size_t ptr = p->ptr + 1;
+  if (ptr == TOKEN_BUF_LEN)
+    die("peek(): token buffer is full");
+  if (p->buf[ptr].type != TOKEN_UNINITIALIZED)
+    return p->buf[ptr];
+  p->buf[ptr] = Lexer_next(p->lex);
+  return p->buf[ptr];
 }
 
 void skip(Parser* p) {
@@ -276,11 +328,15 @@ void parseInstruction(Parser* p) {
   if (tokenId(p, "ld").success) {
     advance(p);
     ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(reg8Bit(p)), {
-      IRNode node = IRNode_createInstruction("bb", results[0].value.val, results[1].value.val);
+      IRNode node = IRNode_createInstruction("bb", results[0].value.byte, results[1].value.byte);
       Vector_push(p->nodes, &node);
     });
-    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(int8Bit(p)), {
-      IRNode node = IRNode_createInstruction("bb", results[0].value.val, results[1].value.val);
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(address(p)), {
+      IRNode node = IRNode_createInstruction("ba", results[0].value.byte, results[1].value.expr);
+      Vector_push(p->nodes, &node);
+    });
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(expression(p)), {
+      IRNode node = IRNode_createInstruction("be", results[0].value.byte, results[1].value.expr);
       Vector_push(p->nodes, &node);
     });
     error(p, "wrong operands to instruction");

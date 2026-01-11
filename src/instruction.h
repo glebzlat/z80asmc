@@ -9,6 +9,7 @@
 typedef enum {
   EI_BYTE,
   EI_EXPR,
+  EI_ADDR,
 } EncodedItemKind;
 
 typedef enum {
@@ -21,6 +22,7 @@ typedef struct {
   union {
     uint8_t byte;
     Vector* expr;
+    Vector* addr;
   } data;
 } EncodedItem;
 

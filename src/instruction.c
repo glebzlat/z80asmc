@@ -42,6 +42,10 @@ IRNode IRNode_createInstruction(char const* fmt, ...) {
       item.kind = EI_EXPR;
       item.data.expr = va_arg(ap, Vector*);
       break;
+    case 'a':
+      item.kind = EI_ADDR;
+      item.data.addr = va_arg(ap, Vector*);
+      break;
     default:
       die("IRNode_createInstruction(): incorrect format specifier");
     }
@@ -93,6 +97,11 @@ static void EncodedItem_print(FILE* fout, EncodedItem* item) {
       break;
     case EI_EXPR:
       fprintf(fout, "(EXPR ");
+      EncodedItem_printExpr(fout, item->data.expr);
+      fprintf(fout, ")");
+      break;
+    case EI_ADDR:
+      fprintf(fout, "(ADDR ");
       EncodedItem_printExpr(fout, item->data.expr);
       fprintf(fout, ")");
       break;

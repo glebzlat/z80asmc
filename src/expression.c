@@ -84,7 +84,7 @@ int ExprParser_get(ExprParser* p, Token tok) {
     Vector_pop(p->o, NULL);
   }
 
-  else if (tok.type == TOKEN_END) {
+  else if (tok.type == TOKEN_END || tok.type == TOKEN_NEWLINE) {
     while (!Vector_isEmpty(p->o)) {
       if (top(p->o)->type == TOKEN_LEFT_PAREN) {
         error(p, EXPR_ERROR_UNBALANCED_LEFT_PAREN, tok);
