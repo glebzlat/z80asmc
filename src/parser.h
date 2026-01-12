@@ -7,11 +7,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define TOKEN_BUF_LEN 32
-
 typedef struct {
   Lexer* lex;
-  Token buf[TOKEN_BUF_LEN];
+  Vector* buf;
   size_t ptr;
   bool error;
   Vector* errors;

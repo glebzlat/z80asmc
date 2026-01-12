@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "expression.h"
 #include "instruction.h"
@@ -47,6 +48,8 @@ Result address(Parser* p);
 
 static void advance(Parser* p);
 static Token peek(Parser* p);
+static Token* cur(Parser* p);
+static Token* tokAt(Parser* p, size_t idx);
 static void skip(Parser* p);
 static void parseLabel(Parser* p);
 static void parseInstruction(Parser* p);
@@ -70,11 +73,18 @@ Parser Parser_make(Lexer* lex) {
   if (!nodes)
     die("Vector_new() failed");
 
+  Vector* buf = Vector_new(sizeof(Token));
+  if (!buf)
+    die("Vector_new() failed");
+  Token dummy = {0};
+  Vector_push(buf, &dummy);
+
   return (Parser){
       .lex = lex,
       .errors = errors,
       .labels = labels,
       .nodes = nodes,
+      .buf = buf,
   };
 }
 
@@ -99,6 +109,8 @@ void Parser_deinit(Parser* p) {
       free(n->data.label.name);
   }
   Vector_destroy(p->nodes);
+
+  Vector_destroy(p->buf);
 }
 
 static inline bool match_save(Parser* p, Result r, size_t* n_results, Result arr[]) {
@@ -124,12 +136,14 @@ void Parser_parse(Parser* p) {
   while (true) {
     parseLabel(p);
     parseInstruction(p);
-    if (p->buf[p->ptr].type == TOKEN_END)
+    if (cur(p)->type == TOKEN_END)
       break;
 
     p->ptr = 0;
-    for (size_t i = 1; i < TOKEN_BUF_LEN && p->buf[i].type != TOKEN_UNINITIALIZED; ++i)
-      p->buf[i].type = TOKEN_UNINITIALIZED;
+    for (size_t i = 1; i < Vector_len(p->buf) && Vector_at(p->buf, i) != TOKEN_UNINITIALIZED; ++i) {
+      Token* tok = Vector_at(p->buf, i);
+      tok->type = TOKEN_UNINITIALIZED;
+    }
   }
 }
 
@@ -148,11 +162,11 @@ void ParserError_print(ParserError const* err, FILE* fout) {
     fprintf(fout, "%s\n%*s", err->line, (int)err->col + 1, "^\n");
 }
 
-Result tokenType(Parser* p, TokenType type) { return (Result){.success = p->buf[p->ptr].type == type}; }
+Result tokenType(Parser* p, TokenType type) { return (Result){.success = cur(p)->type == type}; }
 
 Result tokenTypeValue(Parser* p, TokenType type, char const* val) {
-  Token cur = p->buf[p->ptr];
-  bool success = cur.type == type && strncasecmp(cur.value, val, cur.len) == 0;
+  Token t = *cur(p);
+  bool success = t.type == type && strncasecmp(t.value, val, t.len) == 0;
   return (Result){.success = success};
 }
 
@@ -182,7 +196,7 @@ Result comma(Parser* p) { return tokenType(p, TOKEN_COMMA); }
 Result expression(Parser* p) {
   ExprParser ep = ExprParser_make();
   while (true) {
-    Token tok = p->buf[p->ptr];
+    Token tok = *cur(p);
     if (ExprParser_get(&ep, tok) == -1) {
       Vector_destroy(ep.o);
       Vector_destroy(ep.e);
@@ -192,7 +206,7 @@ Result expression(Parser* p) {
     tok = peek(p);
     if (tok.type == TOKEN_END || tok.type == TOKEN_NEWLINE)
       break;
-    p->ptr += 1;
+    advance(p);
   }
   Vector_destroy(ep.o);
   return SUCCESS(.expr = ep.e);
@@ -204,7 +218,7 @@ Result address(Parser *p) {
   bool starts_with_paren = false, ends_with_paren = false;
   Token prev_tok = {0};
   while (true) {
-    Token tok = p->buf[p->ptr];
+    Token tok = *cur(p);
     if (ExprParser_get(&ep, tok) == -1) {
       Vector_destroy(ep.o);
       Vector_destroy(ep.e);
@@ -221,7 +235,7 @@ Result address(Parser *p) {
         ends_with_paren = true;
       break;
     }
-    p->ptr += 1;
+    advance(p);
   }
 
   if (starts_with_paren && ends_with_paren) {
@@ -236,49 +250,68 @@ Result address(Parser *p) {
 
 void advance(Parser* p) {
   p->ptr += 1;
-  // XXX: replace fixed length buffer with a vector to allow long backtracking
-  if (p->ptr == TOKEN_BUF_LEN)
-    die("advance(): token buffer is full");
-  if (p->buf[p->ptr].type != TOKEN_UNINITIALIZED)
-    return;
-  p->buf[p->ptr] = Lexer_next(p->lex);
+  if (p->ptr == Vector_len(p->buf)) {
+    Token tok = Lexer_next(p->lex);
+    Vector_push(p->buf, &tok);
+  }
+  if (cur(p)->type == TOKEN_UNINITIALIZED) {
+    Token tok = Lexer_next(p->lex);
+    memcpy(cur(p), &tok, sizeof(tok));
+  }
 }
 
 Token peek(Parser* p) {
-  size_t ptr = p->ptr + 1;
-  if (ptr == TOKEN_BUF_LEN)
-    die("peek(): token buffer is full");
-  if (p->buf[ptr].type != TOKEN_UNINITIALIZED)
-    return p->buf[ptr];
-  p->buf[ptr] = Lexer_next(p->lex);
-  return p->buf[ptr];
+  Token tok;
+  size_t idx = p->ptr + 1;
+  if (idx == Vector_len(p->buf)) {
+    tok = Lexer_next(p->lex);
+    Vector_push(p->buf, &tok);
+    return tok;
+  }
+  Token* ptr = Vector_at(p->buf, idx);
+  if (ptr->type != TOKEN_UNINITIALIZED) {
+    return *ptr;
+  }
+  tok = Lexer_next(p->lex);
+  memcpy(ptr, &tok, sizeof(tok));
+  return tok;
+}
+
+Token* cur(Parser* p) {
+  Token* tok = Vector_at(p->buf, p->ptr);
+  assert(tok);
+  return tok;
+}
+
+static Token* tokAt(Parser* p, size_t idx) {
+  return (Token*)Vector_at(p->buf, idx);
 }
 
 void skip(Parser* p) {
   /* Check whether the newline or END is already consumed. It is required due
    * to parseLabel function: it tries to consume two tokens: an ID and a colon,
    * and backtracks if the tokens don't match. */
-  for (size_t i = p->ptr; i < TOKEN_BUF_LEN; ++i)
-    if (p->buf[i].type == TOKEN_NEWLINE || p->buf[i].type == TOKEN_END)
+  for (size_t i = p->ptr; i < Vector_len(p->buf); ++i)
+    if (tokAt(p, i)->type == TOKEN_NEWLINE || tokAt(p, i)->type == TOKEN_END)
       return;
-  Token tok = p->buf[p->ptr];
+  Token tok = *cur(p);
   while (tok.type != TOKEN_NEWLINE && tok.type != TOKEN_END)
     tok = Lexer_next(p->lex);
 }
 
 static void parseLabel(Parser* p) {
   advance(p);
-  if (p->buf[p->ptr].type != TOKEN_ID) {
+  if (cur(p)->type != TOKEN_ID) {
     p->ptr -= 1;
     return;
   }
   advance(p);
-  if (p->buf[p->ptr].type != TOKEN_COLON) {
+  if (cur(p)->type != TOKEN_COLON) {
     p->ptr -= 2;
     return;
   }
 
-  Token* label_tok = &p->buf[p->ptr - 1];
+  Token* label_tok = tokAt(p, p->ptr - 1);
 
   char* label_name = Token_str(label_tok);
   if (!label_name)
@@ -302,8 +335,8 @@ void parseInstruction(Parser* p) {
     if (COND) {                                                                                                        \
       BODY;                                                                                                            \
       if (!tokenType(p, TOKEN_NEWLINE).success && !tokenType(p, TOKEN_END).success) {                                  \
-        error(p, "excessive characters at the end of an instruction: %.*s", (int)p->buf[p->ptr].len,                   \
-              p->buf[p->ptr].value);                                                                                   \
+        error(p, "excessive characters at the end of an instruction: %.*s", (int)cur(p)->len,                   \
+              cur(p)->value);                                                                                   \
         goto error;                                                                                                    \
       }                                                                                                                \
       goto success;                                                                                                    \
@@ -319,10 +352,10 @@ void parseInstruction(Parser* p) {
 #define MATCH(CALL) (match_discard(p, (CALL)))
 
   advance(p);
-  if (p->buf[p->ptr].type == TOKEN_END)
+  if (cur(p)->type == TOKEN_END)
     return;
 
-  if (p->buf[p->ptr].type == TOKEN_NEWLINE)
+  if (cur(p)->type == TOKEN_NEWLINE)
     return;
 
   if (tokenId(p, "ld").success) {
@@ -350,11 +383,11 @@ void parseInstruction(Parser* p) {
   } else if (tokenId(p, "pop").success) {
     advance(p);
     ALT(MATCH(tokenId(p, "bc")), printf("pop bc\n"));
-  } else if (p->buf[p->ptr].type != TOKEN_ID) {
+  } else if (cur(p)->type != TOKEN_ID) {
     error(p, "expected instruction name");
     skip(p);
   } else {
-    error(p, "unknown instruction: %.*s", (int)p->buf[p->ptr].len, p->buf[p->ptr].value);
+    error(p, "unknown instruction: %.*s", (int)cur(p)->len, cur(p)->value);
     skip(p);
   }
 
@@ -378,7 +411,7 @@ static void error(Parser* p, const char* fmt, ...) {
   if (!str)
     die("vdsprintf() failed");
 
-  Token* last = &p->buf[p->ptr];
+  Token* last = cur(p);
   char* source_line = Lexer_line(p->lex, last->line);
 
   ParserError e = {
