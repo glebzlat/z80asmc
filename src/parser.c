@@ -145,7 +145,7 @@ void ParserError_print(ParserError const* err, FILE* fout) {
 
   fprintf(fout, "%zu:%zu: error: %s\n", err->lineno, err->col, err->reason);
   if (err->line)
-    fprintf(fout, "%s\n%*s", err->line, (int)err->col, "^\n");
+    fprintf(fout, "%s\n%*s", err->line, (int)err->col + 1, "^\n");
 }
 
 Result tokenType(Parser* p, TokenType type) { return (Result){.success = p->buf[p->ptr].type == type}; }
