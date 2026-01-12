@@ -204,11 +204,12 @@ Lexer Lexer_make(char const* buf) {
 Token Lexer_next(Lexer* lex) {
   assert(lex);
 
+  while (eatWhitespace(lex))
+    ;
+
   if (isAtEnd(lex))
     return makeToken(lex, TOKEN_END);
 
-  while (eatWhitespace(lex))
-    ;
   lex->start = lex->cur;
 
   Token result;
@@ -301,6 +302,7 @@ char* Lexer_line(Lexer* lex, size_t line) {
   assert(lex);
   assert(line > 0);
 
+  /* Count lines and stop when n_line == line */
   size_t start = 0, n_line = 1;
   for (; lex->buf[start] != '\0'; ++start) {
     if (lex->buf[start] == '\n')
@@ -309,10 +311,14 @@ char* Lexer_line(Lexer* lex, size_t line) {
       break;
   }
 
+  /* Actual number of lines is less than the given number */
   if (n_line < line)
     return NULL;
 
-  start += 1;
+  if (start == '\n')
+    start += 1;
+
+  /* Get the rest of the line */
   size_t end = start + 1;
   while (lex->buf[end] != '\n' && lex->buf[end] != '\0')
     end += 1;
