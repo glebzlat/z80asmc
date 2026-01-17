@@ -64,11 +64,10 @@ int main(void) {
     TEST_CASE(testLexer("42q", 2, tokens));
   }
 
-  // XXX
-  // {
-  //   ClueToken tokens[] = {{.lit = "010101", .type = TOKEN_BINARY}, {.type = TOKEN_END}};
-  //   TEST_CASE(testLexer("0b010101", 2, tokens));
-  // }
+  {
+    ClueToken tokens[] = {{.lit = "010101", .type = TOKEN_BINARY}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("0b010101", 2, tokens));
+  }
 
   {
     ClueToken tokens[] = {{.lit = "010101", .type = TOKEN_BINARY}, {.type = TOKEN_END}};
@@ -80,16 +79,15 @@ int main(void) {
     TEST_CASE(testLexer("%010101", 2, tokens));
   }
 
-  // XXX
-  // {
-  //   ClueToken tokens[] = {{.lit = "42", .type = TOKEN_OCTAL}, {.type = TOKEN_END}};
-  //   TEST_CASE(testLexer("0q42", 2, tokens));
-  // }
-  //
-  // {
-  //   ClueToken tokens[] = {{.lit = "42", .type = TOKEN_OCTAL}, {.type = TOKEN_END}};
-  //   TEST_CASE(testLexer("0Q42", 2, tokens));
-  // }
+  {
+    ClueToken tokens[] = {{.lit = "42", .type = TOKEN_OCTAL}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("0q42", 2, tokens));
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "42", .type = TOKEN_OCTAL}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("0Q42", 2, tokens));
+  }
 
   return tests_failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }

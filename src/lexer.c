@@ -430,6 +430,30 @@ static Token parseNumber(Lexer* lex) {
   bool ok = false;
   Token tok = {0};
 
+  // ("0b" / '%') [01]+
+  if (matchLiteral(lex, "0b") || matchLiteral(lex, "0B") || matchChar(lex, '%')) {
+    lex->start = lex->cur;
+    while (matchRange(lex, '0', '1'))
+      ok = true;
+    if (ok)
+      tok = makeToken(lex, TOKEN_BINARY);
+    else
+      tok = makeErrorToken(lex, "incorrect binary number");
+    return tok;
+  }
+
+  // "0q" [0-7]+
+  if (matchLiteral(lex, "0q") || matchLiteral(lex, "0Q")) {
+    lex->start = lex->cur;
+    while (matchRange(lex, '0', '7'))
+      ok = true;
+    if (ok)
+      tok = makeToken(lex, TOKEN_OCTAL);
+    else
+      tok = makeErrorToken(lex, "incorrect octal number");
+    return tok;
+  }
+
   // [0-1]+ 'b'
   if (matchRange(lex, '0', '1')) {
     while (matchRange(lex, '0', '1'))
@@ -473,30 +497,6 @@ static Token parseNumber(Lexer* lex) {
       tok = makeErrorToken(lex, "incorrect hexadecimal number");
     else
       tok = makeToken(lex, TOKEN_HEXADECIMAL);
-    return tok;
-  }
-
-  // ("0b" / '%') [01]+
-  if (matchLiteral(lex, "0b") || matchLiteral(lex, "0B") || matchChar(lex, '%')) {
-    lex->start = lex->cur;
-    while (matchRange(lex, '0', '1'))
-      ok = true;
-    if (!ok)
-      tok = makeErrorToken(lex, "incorrect binary number");
-    else
-      tok = makeToken(lex, TOKEN_BINARY);
-    return tok;
-  }
-
-  // "0q" [0-7]+
-  if (matchLiteral(lex, "0q") || matchLiteral(lex, "0Q")) {
-    lex->start = lex->cur;
-    while (matchRange(lex, '0', '7'))
-      ok = true;
-    if (!ok)
-      tok = makeErrorToken(lex, "incorrect octal number");
-    else
-      tok = makeToken(lex, TOKEN_BINARY);
     return tok;
   }
 
