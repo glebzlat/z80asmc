@@ -54,11 +54,20 @@
     }                                                                                                                  \
   } while (0)
 
+#define CHECK_TOKEN_TYPE_ERROR(TOKEN, CLEANUP)                                                                         \
+  do {                                                                                                                 \
+    if ((TOKEN).type == TOKEN_ERROR) {                                                                                 \
+      fprintf(stderr, "Check " #TOKEN " != TOKEN_ERROR failed: %s\n", (TOKEN).value);                                    \
+      CLEANUP;                                                                                                         \
+      return 1;                                                                                                        \
+    }                                                                                                                  \
+  } while (0)
+
 #define TEST_CASE(CALL)                                                                                                \
   do {                                                                                                                 \
     bool failed = (CALL);                                                                                              \
     if (failed) {                                                                                                      \
-      fprintf(stderr, "Test %s failed\nOn %s:%i\n", #CALL, __FILE__, __LINE__);                                             \
+      fprintf(stderr, "Test %s failed\nOn %s:%i\n", #CALL, __FILE__, __LINE__);                                        \
     }                                                                                                                  \
     tests_failed += failed;                                                                                            \
   } while (0)

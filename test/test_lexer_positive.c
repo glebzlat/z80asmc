@@ -89,6 +89,36 @@ int main(void) {
     TEST_CASE(testLexer("0Q42", 2, tokens));
   }
 
+  {
+    ClueToken tokens[] = {{.lit = "abc", .type = TOKEN_ID}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("abc", 2, tokens));
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "abc", .type = TOKEN_STRING}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("\"abc\"", 2, tokens));
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "a", .type = TOKEN_STRING}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("\"a\"", 2, tokens));
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "\\\"", .type = TOKEN_STRING}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("\"\\\"\"", 2, tokens));
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "", .type = TOKEN_STRING}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("\"\"", 2, tokens));
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "\n", .type = TOKEN_NEWLINE}, {.type = TOKEN_END}};
+    TEST_CASE(testLexer("\n", 2, tokens));
+  }
+
   return tests_failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -98,6 +128,7 @@ static int testLexer(char const* str, int n_tokens, ClueToken const* tok_arr) {
   for (int i = 0; i < n_tokens; ++i) {
     Token tok = Lexer_next(&lex);
     ClueToken clue = tok_arr[i];
+    CHECK_TOKEN_TYPE_ERROR(tok, NULL);
     if (clue.type)
       CHECK_TOKEN_TYPES_EQUAL(tok.type, clue.type, NULL);
     if (clue.lit)
