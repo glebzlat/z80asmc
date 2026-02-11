@@ -539,6 +539,8 @@ static Token parseString(Lexer* lex) {
       break;
   }
   tok.col = col;
+  if (tok.type != TOKEN_ERROR)
+    tok.type = TOKEN_STRING;
   return tok;
 }
 
