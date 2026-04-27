@@ -46,7 +46,6 @@ Map* Map_new(size_t value_size, Map_value_destructor_fn dtor) {
 
   Map* m = malloc(sizeof(*m));
   if (!m) {
-    perror("malloc() failed");
     return NULL;
   }
 
@@ -57,7 +56,6 @@ Map* Map_new(size_t value_size, Map_value_destructor_fn dtor) {
 
   m->entries = calloc(m->capacity, sizeof(MapEntry));
   if (!m->entries) {
-    perror("calloc() failed");
     free(m);
     return NULL;
   }
@@ -160,11 +158,12 @@ bool MapIter_next(MapIter* it) {
 static int Map_expand(Map* m) {
   size_t new_capacity = m->capacity * 2;
 
-  m->entries = realloc(m->entries, new_capacity);
-  if (!m->entries) {
-    perror("realloc() failed");
+  MapEntry* entries = realloc(m->entries, new_capacity);
+  if (!entries) {
     return -1;
   }
+
+  m->entries = entries;
 
   return 0;
 }
@@ -176,7 +175,6 @@ static int Map_shrink(Map* m) {
 
   MapEntry* new_entries = calloc(new_capacity, sizeof(MapEntry));
   if (!new_entries) {
-    perror("calloc() failed");
     return -1;
   }
 

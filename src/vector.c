@@ -19,7 +19,6 @@ Vector* Vector_new(size_t elem_size) {
 
   Vector* v = malloc(sizeof(*v));
   if (!v) {
-    perror("malloc() failed");
     return NULL;
   }
 
@@ -27,6 +26,10 @@ Vector* Vector_new(size_t elem_size) {
   v->capacity = 16;
   v->len = 0;
   v->data = malloc(v->el_size * v->capacity);
+  if (!v->data) {
+    free(v);
+    return NULL;
+  }
 
   return v;
 }
@@ -136,12 +139,12 @@ int Vector_resize(Vector* v, size_t size) {
   if (size < v->len)
     return -1;
 
-  v->data = realloc(v->data, size * v->el_size);
-  if (!v->data) {
-    perror("realloc() failed");
+  uint8_t* data = realloc(v->data, size * v->el_size);
+  if (!data) {
     return -1;
   }
 
+  v->data = data;
   v->capacity = size;
 
   return 0;
