@@ -534,6 +534,10 @@ static Token parseString(Lexer* lex) {
   Token tok;
   size_t col = lex->cur - lex->bol;
   while (true) {
+    if (peek(lex) == '"') {
+      tok = makeToken(lex, TOKEN_CHAR);
+      break;
+    }
     tok = parseChar(lex);
     if ((tok.type == TOKEN_CHAR && tok.value[tok.len] == '"') || tok.type == TOKEN_ERROR)
       break;
