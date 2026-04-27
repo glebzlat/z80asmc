@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -39,8 +40,6 @@ char* Token_format(Token* tok) {
     buf = dsprintf("%zu:%zu:%s%s:%.*s", tok->line, tok->col, unary_str, TokenType_str(tok->type), (int)tok->len,
                    tok->value);
   }
-  if (!buf)
-    die("dsprintf() failed");
   return buf;
 }
 
@@ -49,7 +48,7 @@ char* Token_str(Token* tok) {
 
   char* str = malloc(tok->len + 1);
   if (!str)
-    die("malloc() failed");
+    return NULL;
 
   strncpy(str, tok->value, tok->len);
   str[tok->len] = '\0';
@@ -130,11 +129,12 @@ char const* TokenType_str(TokenType type) {
   case TOKEN_COLON:
     return "TOKEN_COLON";
   default:
+    /* Invariant */
     die("TokenType_str: unknown token type");
   }
 }
 
-unsigned long Token_toInt(Token* tok) {
+unsigned long Token_toInt(Token* tok, bool* correct) {
   assert(tok);
   char* end = NULL;
   long value = 0;
@@ -186,12 +186,20 @@ unsigned long Token_toInt(Token* tok) {
   case TOKEN_COLON:
   case TOKEN_NEWLINE:
   default:
-    die("Token_toInt(): could not convert to integer");
+    /* Invariant */
+    die("Token_toInt(): token type is not integer convertible");
+  }
+
+  if (errno) {
+    *correct = false;
+    return 0;
   }
 
   assert(value >= 0);
   if (end && tok->value + tok->len != end)
-    die("Token_toInt(): incorrect integer");
+    *correct = false;
+
+  *correct = true;
   return (unsigned)value;
 }
 
@@ -325,10 +333,8 @@ char* Lexer_line(Lexer* lex, size_t line) {
 
   size_t len = end - start;
   char* buf = malloc(len + 1);
-  if (!buf) {
-    perror("malloc() failed");
+  if (!buf)
     return NULL;
-  }
 
   strncpy(buf, lex->buf + start, len);
   buf[len] = '\0';
@@ -612,6 +618,7 @@ static int escToInt(char const* ch) {
     case 'V':
       return 11;
     default:
+      /* Invariant: lexer must not permit incorrect escape sequences */
       die("escToInt(): incorrect escape sequence");
     }
   }

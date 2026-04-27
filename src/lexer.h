@@ -65,7 +65,7 @@ typedef struct {
 char* Token_format(Token* tok);
 char* Token_str(Token* tok);
 char const* TokenType_str(TokenType type);
-unsigned long Token_toInt(Token* tok);
+unsigned long Token_toInt(Token* tok, bool* correct);
 
 Lexer Lexer_make(char const* buf);
 Token Lexer_next(Lexer* lex);

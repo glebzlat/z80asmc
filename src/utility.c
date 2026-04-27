@@ -30,20 +30,17 @@ char* vdsprintf(char const* format, va_list ap) {
 
   len = vsnprintf(NULL, 0, format, ap);
   if (len < 0) {
-    perror("vsnprintf failed");
     va_end(aq);
     return NULL;
   }
 
   buf = malloc(sizeof(*buf) * ((size_t)len + 1));
   if (!buf) {
-    perror("malloc failed");
     return NULL;
   }
 
   len = vsnprintf(buf, (size_t)len + 1, format, aq);
   if (len < 0) {
-    perror("vsnprintf failed");
     free(buf);
     return NULL;
   }
