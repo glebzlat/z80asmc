@@ -55,7 +55,7 @@ typedef struct {
  * argument:
  *
  *   - b: byte (uint8_t)
- *   - w: word (uint16_t)
+ *   - a: address (Vector[Token])
  *   - e: expression (Vector[Token])
  */
 IRNode IRNode_createInstruction(char const* fmt, ...);
