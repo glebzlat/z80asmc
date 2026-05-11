@@ -16,9 +16,10 @@ int main(int argc, char** argv) {
   if (!fin)
     die("fopen() failed");
 
-  char data[100];
-  size_t n_read = fread(data, 1, 100, fin);
-  data[n_read] = '\0';
+  char* data = ffullread(fin);
+  if (!data) {
+    die("failed to read the file");
+  }
 
   Lexer lex = Lexer_make(data);
 
@@ -41,6 +42,7 @@ int main(int argc, char** argv) {
 
   Parser_deinit(&p);
   fclose(fin);
+  free(data);
 
   return exitcode;
 }

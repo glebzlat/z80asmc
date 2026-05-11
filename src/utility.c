@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,6 +65,66 @@ int strncasecmp(char const* a, char const* b, size_t len) {
       return 1;
   }
   return 0;
+}
+
+char* ffullread(FILE* fin) {
+  enum {
+    BUF_BASE_SIZE = 1024,
+    READ_SIZE = BUF_BASE_SIZE - 1,
+  };
+
+  assert(fin);
+
+  size_t buf_len = 0, buf_ptr = 0;
+  char* buf = NULL;
+  if (!(buf = malloc(sizeof(*buf) * BUF_BASE_SIZE))) {
+    return NULL;
+  }
+  buf_len += BUF_BASE_SIZE;
+
+  char read_tmp[READ_SIZE];
+  size_t n_read = 0;
+  do {
+    n_read = fread(read_tmp, sizeof(*read_tmp), READ_SIZE, fin);
+    if (n_read < READ_SIZE) {
+      if (ferror(fin)) {
+        free(buf);
+        return NULL;
+      }
+    }
+
+    // Do the newly read bytes overflow size_t?
+    if (n_read > SIZE_MAX - buf_ptr - 1) {
+      free(buf);
+      errno = EFBIG;
+      return NULL;
+    }
+
+    if (buf_ptr + n_read + 1 > buf_len) {
+      // Can we reallocate the buffer without overflowing size_t?
+      if (buf_len > SIZE_MAX - BUF_BASE_SIZE) {
+        free(buf);
+        errno = EFBIG;
+        return NULL;
+      }
+
+      char* alloc_tmp = realloc(buf, buf_len + BUF_BASE_SIZE);
+      if (!alloc_tmp) {
+        free(buf);
+        return NULL;
+      }
+
+      buf = alloc_tmp;
+      buf_len += BUF_BASE_SIZE;
+    }
+
+    memcpy(buf + buf_ptr, read_tmp, n_read);
+    buf_ptr += n_read;
+  } while (READ_SIZE == n_read);
+
+  buf[buf_ptr] = '\0';
+
+  return buf;
 }
 
 void die(char const* message) {

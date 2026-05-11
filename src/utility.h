@@ -2,6 +2,7 @@
 #define UTILITY_H
 
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #define CALL_NON_NULL(obj, fn)                                                                                         \
@@ -13,6 +14,8 @@ char* dsprintf(char const* format, ...) __attribute__((format(printf, 1, 2), __w
 char* vdsprintf(char const* format, va_list ap) __attribute__((__warn_unused_result__));
 
 int strncasecmp(char const* a, char const* b, size_t len);
+
+char* ffullread(FILE* fin);
 
 void die(char const* message) __attribute__((noreturn));
 
