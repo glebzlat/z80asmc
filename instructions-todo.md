@@ -1,0 +1,152 @@
+# Instructions to implement
+
+- [ ] LD r, r'
+- [ ] LD r,n
+- [ ] LD r, (HL)
+- [ ] LD r, (IX+d)
+- [ ] LD r, (IY+d)
+- [ ] LD (HL), r
+- [ ] LD (IX+d), r
+- [ ] LD (IY+d), r
+- [ ] LD (HL), n
+- [ ] LD (IX+d), n
+- [ ] LD (IY+d), n
+- [ ] LD A, (BC)
+- [ ] LD A, (DE)
+- [ ] LD A, (nn)
+- [ ] LD (BC), A
+- [ ] LD (DE), A
+- [ ] LD (nn), A
+- [ ] LD A, I
+- [ ] LD A, R
+- [ ] LD I,A
+- [ ] LD R, A
+- [ ] LD dd, nn
+- [ ] LD IX, nn
+- [ ] LD IY, nn
+- [ ] LD HL, (nn)
+- [ ] LD dd, (nn)
+- [ ] LD IX, (nn)
+- [ ] LD IY, (nn)
+- [ ] LD (nn), HL
+- [ ] LD (nn), dd
+- [ ] LD (nn), IX
+- [ ] LD (nn), IY
+- [ ] LD SP, HL
+- [ ] LD SP, IX
+- [ ] LD SP, IY
+- [ ] PUSH qq
+- [ ] PUSH IX
+- [ ] PUSH IY
+- [ ] POP qq
+- [ ] POP IX
+- [ ] POP IY
+- [ ] EX DE, HL
+- [ ] EX AF, AF′
+- [ ] EXX
+- [ ] EX (SP), HL
+- [ ] EX (SP), IX
+- [ ] EX (SP), IY
+- [ ] LDI
+- [ ] LDIR
+- [ ] LDD
+- [ ] LDDR
+- [ ] CPI
+- [ ] CPIR
+- [ ] CPD
+- [ ] CPDR
+- [ ] ADD A, r
+- [ ] ADD A, n
+- [ ] ADD A, (HL)
+- [ ] ADD A, (IX + d)
+- [ ] ADD A, (IY + d)
+- [ ] ADC A, s
+- [ ] SUB s
+- [ ] SBC A, s
+- [ ] AND s
+- [ ] OR s
+- [ ] XOR s
+- [ ] CP s
+- [ ] INC r
+- [ ] INC (HL)
+- [ ] INC (IX+d)
+- [ ] INC (IY+d)
+- [ ] DEC m
+- [ ] DAA
+- [ ] CPL
+- [ ] NEG
+- [ ] CCF
+- [ ] SCF
+- [ ] NOP
+- [ ] HALT
+- [ ] DI
+- [ ] EI
+- [ ] IM 0
+- [ ] IM 1
+- [ ] IM 2
+- [ ] ADD HL, ss
+- [ ] ADC HL, ss
+- [ ] SBC HL, ss
+- [ ] ADD IX, pp
+- [ ] ADD IY, rr
+- [ ] INC ss
+- [ ] INC IX
+- [ ] INC IY
+- [ ] DEC ss
+- [ ] DEC IX
+- [ ] DEC IY
+- [ ] RLCA
+- [ ] RLA
+- [ ] RRCA
+- [ ] RRA
+- [ ] RLC r
+- [ ] RLC (HL)
+- [ ] RLC (IX+d)
+- [ ] RLC (IY+d)
+- [ ] RL m
+- [ ] RRC m
+- [ ] RR m
+- [ ] SLA m
+- [ ] SRA m
+- [ ] SRL m
+- [ ] RLD
+- [ ] RRD
+- [ ] BIT b, r
+- [ ] BIT b, (HL)
+- [ ] BIT b, (IX+d)
+- [ ] BIT b, (IY+d)
+- [ ] SET b, r
+- [ ] SET b, (HL)
+- [ ] SET b, (IX+d)
+- [ ] SET b, (IY+d)
+- [ ] RES b, m
+- [ ] JP nn
+- [ ] JP cc, nn
+- [ ] JR e
+- [ ] JR C, e
+- [ ] JR NC, e
+- [ ] JR Z, e
+- [ ] JR NZ, e
+- [ ] JP (HL)
+- [ ] JP (IX)
+- [ ] JP (IY)
+- [ ] DJNZ, e
+- [ ] CALL nn
+- [ ] CALL cc, nn
+- [ ] RET
+- [ ] RET cc
+- [ ] RETI
+- [ ] RETN
+- [ ] RST p
+- [ ] IN A, (n)
+- [ ] IN r (C)
+- [ ] INI
+- [ ] INIR
+- [ ] IND
+- [ ] INDR
+- [ ] OUT (n), A
+- [ ] OUT (C), r
+- [ ] OUTI
+- [ ] OTIR
+- [ ] OUTD
+- [ ] OTDR
