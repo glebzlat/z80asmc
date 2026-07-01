@@ -8,6 +8,7 @@
 #include "instruction.h"
 #include "utility.h"
 #include "parser.h"
+#include "string_lexer.h"
 
 int main(int argc, char** argv) {
   int exitcode = 0;
@@ -21,7 +22,7 @@ int main(int argc, char** argv) {
     die("failed to read the file");
   }
 
-  Lexer lex = Lexer_make(data);
+  Lexer lex = StringLexer_make(data);
 
   Parser p = Parser_make(&lex);
   Parser_parse(&p);
@@ -41,6 +42,7 @@ int main(int argc, char** argv) {
     IRNode_print(stdout, Vector_at(p.nodes, i));
 
   Parser_deinit(&p);
+  StringLexer_deinit(&lex);
   fclose(fin);
   free(data);
 

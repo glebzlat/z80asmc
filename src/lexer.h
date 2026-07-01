@@ -5,70 +5,63 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#define LEXER_MAX_LINE_LEN 256
+#include "token.h"
 
-typedef enum {
-  TOKEN_UNINITIALIZED = 0,
-  TOKEN_END,
-  TOKEN_ERROR,
-  TOKEN_ID,
-  TOKEN_CHAR,
-  TOKEN_STRING,
-  TOKEN_DECIMAL,
-  TOKEN_HEXADECIMAL,
-  TOKEN_OCTAL,
-  TOKEN_BINARY,
-  TOKEN_LEFT_PAREN,
-  TOKEN_RIGHT_PAREN,
-  TOKEN_LEFT_BRACE,
-  TOKEN_RIGHT_BRACE,
-  TOKEN_COMMA,
-  TOKEN_MINUS,
-  TOKEN_PLUS,
-  TOKEN_SLASH,
-  TOKEN_STAR,
-  TOKEN_PERCENT,
-  TOKEN_CAP,
-  TOKEN_TILDE,
-  TOKEN_AMPERSAND,
-  TOKEN_BAR,
-  TOKEN_LEFT_SHIFT,
-  TOKEN_RIGHT_SHIFT,
-  TOKEN_DOUBLE_AMPERSAND,
-  TOKEN_DOUBLE_BAR,
-  TOKEN_BANG,
-  TOKEN_BANG_EQUAL,
-  TOKEN_EQUAL_EQUAL,
-  TOKEN_GREATER_EQUAL,
-  TOKEN_LESS_EQUAL,
-  TOKEN_COLON,
-  TOKEN_NEWLINE,
-} TokenType;
+typedef struct Lexer Lexer;
 
-typedef struct {
-  char const* value;
-  size_t len;
-  size_t line;
-  size_t col;
-  TokenType type;
-  bool unary;  //< Used by ExprParser
-} Token;
+/* Lexer interface
+ *
+ * Actual Lexer implementations must implement Lexer functions, assign
+ * them to Lexer function pointers, and save the implementer struct instance
+ * as `_m_impl`.
+ *
+ * Also an implementation must provide a constructor function and may provide
+ * a destructor function.
+ *
+ * ```
+ * Lexer ImplLexer_make(...);
+ * void ImplLexer_deinit(Lexer* lex);
+ * ```
+ */
+struct Lexer {
+  Token (*_m_next)(void* impl);
+  size_t (*_m_start)(void* impl);
+  size_t (*_m_cur)(void* impl);
+  size_t (*_m_bol)(void* impl);
+  char* (*_m_line)(void* impl, size_t line);
 
-typedef struct {
-  char const* buf;
-  size_t start;
-  size_t cur;
-  size_t line;
-  size_t bol;
-} Lexer;
+  void* _m_impl;
+};
 
-char* Token_format(Token* tok);
-char* Token_str(Token* tok);
-char const* TokenType_str(TokenType type);
-unsigned long Token_toInt(Token* tok, bool* correct);
-
-Lexer Lexer_make(char const* buf);
+/** Get the next token from the lexer
+ *
+ * Denotes scanning errors as tokens with `TOKEN_ERROR` type.
+ *
+ * @param lex Lexer instance
+ * @returns Token
+ */
 Token Lexer_next(Lexer* lex);
+
+/** Get the start index of the current returned token
+ *
+ * @param lex Lexer instance
+ * @returns Token start index
+ */
+size_t Lexer_start(Lexer* lex);
+
+/** Get the current index in the string
+ *
+ * @param lex Lexer instance
+ * @returns Current index
+ */
+size_t Lexer_cur(Lexer* lex);
+
+/** Get the count of Beginnings Of a Line
+ *
+ * @param lex Lexer instance
+ * @returns Beginning Of a Line count
+ */
+size_t Lexer_bol(Lexer* lex);
 
 /** Get a source line from number
  *

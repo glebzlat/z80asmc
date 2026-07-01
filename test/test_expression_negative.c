@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <expression.h>
+#include <string_lexer.h>
 
 #include "common.h"
 
@@ -19,7 +20,7 @@ int main(void) {
 }
 
 int testExpressionFail(char const* expr, ExprErrorType err_type, char const* err_token_repr) {
-  Lexer lex = Lexer_make(expr);
+  Lexer lex = StringLexer_make(expr);
   ExprParser parser = ExprParser_make();
 
   bool assert_failed = false;
@@ -36,6 +37,9 @@ int testExpressionFail(char const* expr, ExprErrorType err_type, char const* err
       assert_failed = true;
     }
   }
+
+  ExprParser_deinit(&parser);
+  StringLexer_deinit(&lex);
 
   return !assert_failed;
 }

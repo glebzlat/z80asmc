@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include <lexer.h>
+#include <string_lexer.h>
 
 #include "common.h"
 
@@ -123,7 +124,7 @@ int main(void) {
 }
 
 static int testLexer(char const* str, int n_tokens, ClueToken const* tok_arr) {
-  Lexer lex = Lexer_make(str);
+  Lexer lex = StringLexer_make(str);
 
   for (int i = 0; i < n_tokens; ++i) {
     Token tok = Lexer_next(&lex);
@@ -134,6 +135,8 @@ static int testLexer(char const* str, int n_tokens, ClueToken const* tok_arr) {
     if (clue.lit)
       CHECK_STREQUALN(tok.value, clue.lit, tok.len, NULL);
   }
+
+  StringLexer_deinit(&lex);
 
   return 0;
 }

@@ -14,6 +14,8 @@ set(TESTING_SOURCES
     src/expression.c
     src/map.c
     src/instruction.c
+    src/string_lexer.c
+    src/token.c
 )
 
 set(INCLUDE_DIRECTORIES

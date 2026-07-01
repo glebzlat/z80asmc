@@ -4,6 +4,7 @@
 
 #include <expression.h>
 #include <lexer.h>
+#include <string_lexer.h>
 
 #include "common.h"
 
@@ -89,7 +90,7 @@ int main(void) {
 }
 
 int testExpression(char const* input, size_t n_tokens, ...) {
-  Lexer lex = Lexer_make(input);
+  Lexer lex = StringLexer_make(input);
   ExprParser parser = ExprParser_make();
 
   while (true) {
@@ -130,6 +131,7 @@ int testExpression(char const* input, size_t n_tokens, ...) {
   va_end(ap);
 
   ExprParser_deinit(&parser);
+  StringLexer_deinit(&lex);
 
   return 0;
 }
