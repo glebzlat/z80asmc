@@ -138,3 +138,16 @@ void die(char const* message) {
 
   exit(EX_SOFTWARE);
 }
+
+bool is_not_zero(void* ptr, size_t size) {
+  assert(ptr);
+
+  char* bytes = ptr;
+  for (size_t i = 0; i < size; ++i) {
+    if (bytes[i] != 0) {
+      return true;
+    }
+  }
+
+  return false;
+}

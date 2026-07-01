@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define CALL_NON_NULL(obj, fn)                                                                                         \
   if ((obj) != NULL)                                                                                                   \
@@ -18,5 +19,7 @@ int strncasecmp(char const* a, char const* b, size_t len);
 char* ffullread(FILE* fin);
 
 void die(char const* message) __attribute__((noreturn));
+
+bool is_not_zero(void* ptr, size_t size);
 
 #endif

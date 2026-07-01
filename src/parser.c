@@ -113,40 +113,6 @@ void Parser_deinit(Parser* p) {
   Vector_destroy(p->buf);
 }
 
-static inline bool match_save(Parser* p, Result r, size_t* n_results, Result arr[]) {
-  if (*n_results == SAVED_RESULTS_LEN)
-    die("n_results == SAVED_RESULTS_LEN");
-  if (!r.success)
-    return false;
-  arr[(*n_results)++] = r;
-  advance(p);
-  return true;
-}
-
-static inline bool match_discard(Parser* p, Result r) {
-  if (!r.success)
-    return false;
-  advance(p);
-  return true;
-}
-
-void Parser_parse(Parser* p) {
-  assert(p);
-
-  while (true) {
-    parseLabel(p);
-    parseInstruction(p);
-    if (cur(p)->type == TOKEN_END)
-      break;
-
-    p->ptr = 0;
-    for (size_t i = 1; i < Vector_len(p->buf) && Vector_at(p->buf, i) != TOKEN_UNINITIALIZED; ++i) {
-      Token* tok = Vector_at(p->buf, i);
-      tok->type = TOKEN_UNINITIALIZED;
-    }
-  }
-}
-
 bool Parser_hasErrors(Parser const* p) {
   assert(p);
 
@@ -325,9 +291,44 @@ static void parseLabel(Parser* p) {
   Map_set(p->labels, node.data.label.name, &node.data.label);
 }
 
+void Parser_parse(Parser* p) {
+  assert(p);
+
+  while (true) {
+    parseLabel(p);
+    parseInstruction(p);
+    if (cur(p)->type == TOKEN_END)
+      break;
+
+    p->ptr = 0;
+    for (size_t i = 1; i < Vector_len(p->buf) && Vector_at(p->buf, i) != TOKEN_UNINITIALIZED; ++i) {
+      Token* tok = Vector_at(p->buf, i);
+      tok->type = TOKEN_UNINITIALIZED;
+    }
+  }
+}
+
+static inline bool match_save(Parser* p, Result r, size_t* n_results, Result arr[]) {
+  if (*n_results == SAVED_RESULTS_LEN)
+    die("n_results == SAVED_RESULTS_LEN");
+  if (!r.success)
+    return false;
+  arr[(*n_results)++] = r;
+  advance(p);
+  return true;
+}
+
+static inline bool match_discard(Parser* p, Result r) {
+  if (!r.success)
+    return false;
+  advance(p);
+  return true;
+}
+
 void parseInstruction(Parser* p) {
   size_t n_results = 0, n_results_save = 0, ptr_save = 0;
   Result results[SAVED_RESULTS_LEN] = {0};
+  IRNode node = {0};
 
 #define ALT(COND, BODY)                                                                                                \
   do {                                                                                                                 \
@@ -350,6 +351,7 @@ void parseInstruction(Parser* p) {
 
 #define MATCH_SAVE(CALL) (match_save(p, (CALL), &n_results, results))
 #define MATCH(CALL) (match_discard(p, (CALL)))
+#define RESULT_VA(FMT, ...) node = IRNode_createInstruction(FMT, __VA_ARGS__)
 
   advance(p);
   if (cur(p)->type == TOKEN_END)
@@ -360,36 +362,41 @@ void parseInstruction(Parser* p) {
 
   if (tokenId(p, "ld").success) {
     advance(p);
-    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(reg8Bit(p)), {
-      IRNode node = IRNode_createInstruction("bb", results[0].value.byte, results[1].value.byte);
-      Vector_push(p->nodes, &node);
-    });
-    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(address(p)), {
-      IRNode node = IRNode_createInstruction("ba", results[0].value.byte, results[1].value.expr);
-      Vector_push(p->nodes, &node);
-    });
-    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(expression(p)), {
-      IRNode node = IRNode_createInstruction("be", results[0].value.byte, results[1].value.expr);
-      Vector_push(p->nodes, &node);
-    });
-    error(p, "wrong operands to instruction");
-    skip(p);
-    goto error;
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(reg8Bit(p)),
+        RESULT_VA("bb", results[0].value.byte, results[1].value.byte));
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(address(p)),
+        RESULT_VA("ba", results[0].value.byte, results[1].value.expr));
+    ALT(MATCH_SAVE(reg8Bit(p)) && MATCH(comma(p)) && MATCH_SAVE(expression(p)),
+        RESULT_VA("be", results[0].value.byte, results[1].value.expr));
+    goto error_unparseable_operands;
+
   } else if (tokenId(p, "push").success) {
     advance(p);
     ALT(MATCH(tokenId(p, "bc")), printf("push bc\n"));
     ALT(MATCH(tokenId(p, "de")), printf("push de\n"));
     ALT(MATCH(tokenId(p, "hl")), printf("push hl"));
+    goto error_unparseable_operands;
+
   } else if (tokenId(p, "pop").success) {
     advance(p);
     ALT(MATCH(tokenId(p, "bc")), printf("pop bc\n"));
+    goto error_unparseable_operands;
+
   } else if (cur(p)->type != TOKEN_ID) {
     error(p, "expected instruction name");
     skip(p);
+
   } else {
     error(p, "unknown instruction: %.*s", (int)cur(p)->len, cur(p)->value);
     skip(p);
   }
+
+  assert(is_not_zero(&node, sizeof(node)));
+  Vector_push(p->nodes, &node);
+
+error_unparseable_operands:
+  error(p, "wrong operands to instruction");
+  skip(p);
 
 error:
   return;
