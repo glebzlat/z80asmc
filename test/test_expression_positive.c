@@ -2,7 +2,8 @@
 #include <assert.h>
 #include <stdarg.h>
 
-#include <expression.h>
+#include <expr_parser.h>
+#include <expression/expr_parser.h>
 #include <lexer.h>
 #include <string_lexer.h>
 
@@ -91,14 +92,15 @@ int main(void) {
 
 int testExpression(char const* input, size_t n_tokens, ...) {
   Lexer lex = StringLexer_make(input);
-  ExprParser parser = ExprParser_make();
+  ExprParser parser = DefaultExprParser_make();
 
   while (true) {
     Token tok = Lexer_next(&lex);
 
-    if (ExprParser_get(&parser, tok) == -1) {
-      char* tok_str = Token_format(&parser.error.tok);
-      fprintf(stderr, "ExprParser_get failed: %s : %s\n", ExprErrorType_toStr(parser.error.type), tok_str);
+    if (ExprParser_feed(&parser, tok) == -1) {
+      ExprError err = ExprParser_getError(&parser);
+      char* tok_str = Token_format(&err.tok);
+      fprintf(stderr, "ExprParser_get failed: %s : %s\n", ExprErrorType_toStr(err.type), tok_str);
       free(tok_str);
       return 1;
     }
@@ -107,19 +109,20 @@ int testExpression(char const* input, size_t n_tokens, ...) {
       break;
   }
 
-  for (size_t i = 0; i < Vector_len(parser.e); ++i) {
-    char* tok_str = Token_format(Vector_at(parser.e, i));
+  Vector* expressions = ExprParser_getExpressions(&parser);
+  for (size_t i = 0; i < Vector_len(expressions); ++i) {
+    char* tok_str = Token_format(Vector_at(expressions, i));
     printf("%s ", tok_str);
     free(tok_str);
   }
   printf("\n");
 
-  CHECK(Vector_len(parser.e) == n_tokens, NULL);
+  CHECK(Vector_len(expressions) == n_tokens, NULL);
 
   va_list ap;
   va_start(ap, n_tokens);
   for (size_t i = 0; i < n_tokens; ++i) {
-    Token* tok = Vector_at(parser.e, i);
+    Token* tok = Vector_at(expressions, i);
     ClueToken clue = va_arg(ap, ClueToken);
 
     if (clue.type)

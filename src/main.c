@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "expression/expr_parser_builder.h"
 #include "instruction.h"
 #include "utility.h"
 #include "parser.h"
@@ -23,8 +24,9 @@ int main(int argc, char** argv) {
   }
 
   Lexer lex = StringLexer_make(data);
+  ExprParserBuilder ep_builder = DefaultExprParserBuilder_make();
 
-  Parser p = Parser_make(&lex);
+  Parser p = Parser_make(&lex, &ep_builder);
   Parser_parse(&p);
 
   if (Parser_hasErrors(&p)) {

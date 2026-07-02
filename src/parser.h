@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "expr_parser_builder.h"
 #include "lexer.h"
 #include "map.h"
 #include "vector.h"
@@ -9,6 +10,7 @@
 
 typedef struct {
   Lexer* lex;
+  ExprParserBuilder* expr_parser_builder;
   Vector* buf;
   size_t ptr;
   bool error;
@@ -24,7 +26,7 @@ typedef struct {
   size_t lineno;
 } ParserError;
 
-Parser Parser_make(Lexer* lex);
+Parser Parser_make(Lexer* lex, ExprParserBuilder* expr_parser_builder);
 void Parser_deinit(Parser* p);
 
 void Parser_parse(Parser* p);

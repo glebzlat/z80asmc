@@ -11,11 +11,14 @@ set(TESTING_SOURCES
     src/parser.c
     src/utility.c
     src/vector.c
-    src/expression.c
     src/map.c
     src/instruction.c
     src/string_lexer.c
     src/token.c
+    src/expr_parser.c
+    src/expr_parser_builder.c
+    src/expression/expr_parser.c
+    src/expression/expr_parser_builder.c
 )
 
 set(INCLUDE_DIRECTORIES

@@ -1,24 +1,32 @@
 #include <assert.h>
+#include <stdbool.h>
+#include <string.h>
 
-#include "expression.h"
-#include "lexer.h"
-#include "utility.h"
+#include "expr_parser.h"
+#include "../token.h"
+#include "../utility.h"
+#include "../vector.h"
+
+typedef struct {
+  Vector* e; //< An expression
+  Vector* o; //< A stack of operators
+  Token prev;
+  ExprError error;
+  bool has_error;
+  bool operations_retrieved;
+} DefaultExprParser;
+
+static void DefaultExprParser_deinit(void* impl);
+static int DefaultExprParser_feed(void* impl, Token tok);
+static Vector* DefaultExprParser_getOperations(void* impl);
+static Vector* DefaultExprParser_getExpressions(void* impl);
+static ExprError DefaultExprParser_getError(void* impl);
 
 static bool isTerm(Token const* tok);
 static bool isOp(Token const* tok);
 static int prec(Token const* tok);
 
-static inline Token const* top(Vector* v) {
-  assert(!Vector_isEmpty(v));
-  return Vector_at((Vector*)v, Vector_len(v) - 1);
-}
-
-static inline void error(ExprParser* p, ExprErrorType type, Token tok) {
-  p->error = (ExprError){.type = type, .tok = tok};
-  p->has_error = true;
-}
-
-ExprParser ExprParser_make(void) {
+ExprParser DefaultExprParser_make(void) {
   Vector* expr = Vector_new(sizeof(Token));
   if (!expr)
     die("Vector_new() failed");
@@ -27,17 +35,47 @@ ExprParser ExprParser_make(void) {
   if (!operators)
     die("Vector_new() failed");
 
-  return (ExprParser){.e = expr, .o = operators};
+  DefaultExprParser* impl = malloc(sizeof(*impl));
+  if (!impl) {
+    die("DefaultExprParser_make(): malloc failed");
+  }
+  memset(impl, 0, sizeof(*impl));
+  impl->e = expr;
+  impl->o = operators;
+
+  ExprParser p = {
+    ._m_feed = DefaultExprParser_feed,
+    ._m_deinit = DefaultExprParser_deinit,
+    ._m_getOperations = DefaultExprParser_getOperations,
+    ._m_getExpressions = DefaultExprParser_getExpressions,
+    ._m_getError = DefaultExprParser_getError,
+    ._m_impl = impl,
+  };
+
+  return p;
 }
 
-void ExprParser_deinit(ExprParser* p) {
-  assert(p);
+static void DefaultExprParser_deinit(void* impl) {
+  DefaultExprParser* p = impl;
   Vector_destroy(p->e);
-  Vector_destroy(p->o);
+  if (!p->operations_retrieved) {
+    Vector_destroy(p->o);
+  }
+  free(impl);
 }
 
-int ExprParser_get(ExprParser* p, Token tok) {
-  assert(p);
+static inline Token const* top(Vector* v) {
+  assert(!Vector_isEmpty(v));
+  return Vector_at((Vector*)v, Vector_len(v) - 1);
+}
+
+static inline void error(DefaultExprParser* p, ExprErrorType type, Token tok) {
+  p->error = (ExprError){.type = type, .tok = tok};
+  p->has_error = true;
+}
+
+int DefaultExprParser_feed(void* impl, Token tok) {
+  DefaultExprParser* p = impl;
 
   Token* prev = &p->prev;
 
@@ -108,21 +146,20 @@ int ExprParser_get(ExprParser* p, Token tok) {
   return 0;
 }
 
-char const* ExprErrorType_toStr(ExprErrorType type) {
-  switch (type) {
-  case EXPR_NO_ERROR:
-    return "EXPR_NO_ERROR";
-  case EXPR_ERROR_WRONG_UNARY_OP:
-    return "operator can't be used as unary";
-  case EXPR_ERROR_UNBALANCED_LEFT_PAREN:
-    return "unbalanced left parenthesis";
-  case EXPR_ERROR_UNBALANCED_RIGHT_PAREN:
-    return "unbalanced right parenthesis";
-  case EXPR_ERROR_UNEXPECTED_TOKEN:
-    return "unexpected token";
-  default:
-    return NULL;
-  }
+static Vector* DefaultExprParser_getOperations(void* impl) {
+  DefaultExprParser* p = impl;
+  p->operations_retrieved = true;
+  return p->o;
+}
+
+static Vector* DefaultExprParser_getExpressions(void* impl) {
+  DefaultExprParser* p = impl;
+  return p->e;
+}
+
+static ExprError DefaultExprParser_getError(void* impl) {
+  DefaultExprParser* p = impl;
+  return p->error;
 }
 
 static bool isTerm(Token const* tok) {

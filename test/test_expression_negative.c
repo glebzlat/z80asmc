@@ -1,7 +1,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include <expression.h>
+#include <expr_parser.h>
+#include <expression/expr_parser.h>
 #include <string_lexer.h>
 
 #include "common.h"
@@ -21,7 +22,7 @@ int main(void) {
 
 int testExpressionFail(char const* expr, ExprErrorType err_type, char const* err_token_repr) {
   Lexer lex = StringLexer_make(expr);
-  ExprParser parser = ExprParser_make();
+  ExprParser parser = DefaultExprParser_make();
 
   bool assert_failed = false;
 
@@ -29,9 +30,10 @@ int testExpressionFail(char const* expr, ExprErrorType err_type, char const* err
   while (tok.type != TOKEN_END) {
     tok = Lexer_next(&lex);
 
-    if (ExprParser_get(&parser, tok) == -1) {
-      CHECK_EQUAL(parser.error.type, err_type, NULL);
-      char* tok_str = Token_format(&parser.error.tok);
+    if (ExprParser_feed(&parser, tok) == -1) {
+      ExprError err = ExprParser_getError(&parser);
+      CHECK_EQUAL(err.type, err_type, NULL);
+      char* tok_str = Token_format(&err.tok);
       CHECK_STREQUAL(tok_str, err_token_repr, free(tok_str));
       free(tok_str);
       assert_failed = true;

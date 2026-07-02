@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "expression.h"
+#include "expr_parser.h"
 #include "instruction.h"
 #include "lexer.h"
 #include "map.h"
@@ -58,8 +58,9 @@ static void error(Parser* p, const char* fmt, ...);
 
 static void map_destroy_ir_label(void* value);
 
-Parser Parser_make(Lexer* lex) {
+Parser Parser_make(Lexer* lex, ExprParserBuilder* expr_parser_builder) {
   assert(lex);
+  assert(expr_parser_builder);
 
   Vector* errors = Vector_new(sizeof(ParserError));
   if (!errors)
@@ -81,6 +82,7 @@ Parser Parser_make(Lexer* lex) {
 
   return (Parser){
       .lex = lex,
+      .expr_parser_builder = expr_parser_builder,
       .errors = errors,
       .labels = labels,
       .nodes = nodes,
@@ -160,12 +162,11 @@ Result reg8Bit(Parser* p) {
 Result comma(Parser* p) { return tokenType(p, TOKEN_COMMA); }
 
 Result expression(Parser* p) {
-  ExprParser ep = ExprParser_make();
+  ExprParser ep = ExprParserBuilder_build(p->expr_parser_builder);
   while (true) {
     Token tok = *cur(p);
-    if (ExprParser_get(&ep, tok) == -1) {
-      Vector_destroy(ep.o);
-      Vector_destroy(ep.e);
+    if (ExprParser_feed(&ep, tok) == -1) {
+      ExprParser_deinit(&ep);
       return FAILURE;
     }
 
@@ -174,20 +175,21 @@ Result expression(Parser* p) {
       break;
     advance(p);
   }
-  Vector_destroy(ep.o);
-  return SUCCESS(.expr = ep.e);
+
+  Result r = SUCCESS(.expr = ExprParser_getExpressions(&ep));
+  ExprParser_deinit(&ep);
+  return r;
 }
 
 Result address(Parser *p) {
-  ExprParser ep = ExprParser_make();
+  ExprParser ep = ExprParserBuilder_build(p->expr_parser_builder);
 
   bool starts_with_paren = false, ends_with_paren = false;
   Token prev_tok = {0};
   while (true) {
     Token tok = *cur(p);
-    if (ExprParser_get(&ep, tok) == -1) {
-      Vector_destroy(ep.o);
-      Vector_destroy(ep.e);
+    if (ExprParser_feed(&ep, tok) == -1) {
+      ExprParser_deinit(&ep);
       return FAILURE;
     }
 
@@ -205,12 +207,12 @@ Result address(Parser *p) {
   }
 
   if (starts_with_paren && ends_with_paren) {
-    Vector_destroy(ep.o);
-    return SUCCESS(.expr = ep.e);
+    Result r = SUCCESS(.expr = ExprParser_getExpressions(&ep));
+    ExprParser_deinit(&ep);
+    return r;
   }
 
-  Vector_destroy(ep.o);
-  Vector_destroy(ep.e);
+  ExprParser_deinit(&ep);
   return FAILURE;
 }
 

@@ -1,19 +1,7 @@
-#include "lexer.h"
 #include <assert.h>
 
-#define CALL(LEX_OBJ, METHOD) do {\
-  assert(LEX_OBJ); \
-  assert((LEX_OBJ)->METHOD); \
-  assert((LEX_OBJ)->_m_impl); \
-  return (LEX_OBJ)->METHOD((LEX_OBJ)->_m_impl); \
-} while (0)
-
-#define CALL_VA(LEX_OBJ, METHOD, ...) do {\
-  assert(LEX_OBJ); \
-  assert((LEX_OBJ)->METHOD); \
-  assert((LEX_OBJ)->_m_impl); \
-  return (LEX_OBJ)->METHOD((LEX_OBJ)->_m_impl, __VA_ARGS__); \
-} while (0)
+#include "lexer.h"
+#include "interfaces.h"
 
 Token Lexer_next(Lexer* lex) {
   CALL(lex, _m_next);
