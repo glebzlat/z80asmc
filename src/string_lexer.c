@@ -49,6 +49,7 @@ Lexer StringLexer_make(char const* buf) {
   if (!impl) {
     die("StringLexer_make(): malloc failed");
   }
+  memset(impl, 0, sizeof(*impl));
   impl->buf = buf;
 
   Lexer lex = {
