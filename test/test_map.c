@@ -237,7 +237,8 @@ TEST_CLEANUP:
 }
 
 TEST(store_2000_entries) {
-  const size_t entries = 9;
+  // const size_t entries = 10;
+  const size_t entries = 2000;
   Map* m = Map_new(sizeof(DummyValue), DummyValue_destroy);
 
   char key[6];
