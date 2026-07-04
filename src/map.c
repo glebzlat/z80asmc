@@ -246,12 +246,8 @@ static void* Map_setEntry(Map* m, void const* key, void* value) {
 
   while (m->entries[idx].type != ENTRY_UNINITIALIZED) {
 
-    /* Reuse deleted entry */
+    /* Reuse deleted entry - effectively the same as initialization */
     if (m->entries[idx].type == ENTRY_DELETED) {
-      if (MapEntry_set(&m->entries[idx], key, value, m->value_size, hash)) {
-        m->status = MAP_ERROR;
-        return NULL;
-      }
       break;
     }
 
