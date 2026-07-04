@@ -236,16 +236,15 @@ TEST_CLEANUP:
   Map_destroy(m);
 }
 
-TEST(store_2000_entries) {
-  // const size_t entries = 10;
-  const size_t entries = 2000;
+TEST(store_8_entries) {
+  const size_t entries = 8;
   Map* m = Map_new(sizeof(DummyValue), DummyValue_destroy);
-
   char key[6];
+
   for (size_t i = 0; i < entries; ++i) {
     sprintf(key, "k%lu", i);
     DummyValue v = {.count = (int)i};
-    Map_set(m, key, &v);
+    CHECK_PTR_NEQUAL(Map_set(m, key, &v), NULL);
   }
 
   CHECK_UINT_EQUAL(Map_len(m), entries);
@@ -254,6 +253,56 @@ TEST(store_2000_entries) {
     sprintf(key, "k%i", i);
     Map_del(m, key);
   }
+
+  CHECK_UINT_EQUAL(Map_len(m), 0);
+
+TEST_CLEANUP:
+  Map_destroy(m);
+}
+
+TEST(store_16_entries) {
+  const size_t entries = 16;
+  Map* m = Map_new(sizeof(DummyValue), DummyValue_destroy);
+  char key[6];
+
+  for (size_t i = 0; i < entries; ++i) {
+    sprintf(key, "k%lu", i);
+    DummyValue v = {.count = (int)i};
+    CHECK_PTR_NEQUAL(Map_set(m, key, &v), NULL);
+  }
+
+  CHECK_UINT_EQUAL(Map_len(m), entries);
+
+  for (int i = (int)entries - 1; i >= 0; --i) {
+    sprintf(key, "k%i", i);
+    Map_del(m, key);
+  }
+
+  CHECK_UINT_EQUAL(Map_len(m), 0);
+
+TEST_CLEANUP:
+  Map_destroy(m);
+}
+
+TEST(store_2000_entries) {
+  const size_t entries = 2000;
+  Map* m = Map_new(sizeof(DummyValue), DummyValue_destroy);
+  char key[6];
+
+  for (size_t i = 0; i < entries; ++i) {
+    sprintf(key, "k%lu", i);
+    DummyValue v = {.count = (int)i};
+    CHECK_PTR_NEQUAL(Map_set(m, key, &v), NULL);
+  }
+
+  CHECK_UINT_EQUAL(Map_len(m), entries);
+
+  for (int i = (int)entries - 1; i >= 0; --i) {
+    sprintf(key, "k%i", i);
+    Map_del(m, key);
+  }
+
+  CHECK_UINT_EQUAL(Map_len(m), 0);
 
 TEST_CLEANUP:
   Map_destroy(m);
@@ -489,6 +538,8 @@ int main(void) {
   TC(ts, map_get_by_nonexisting_key);
   TC(ts, map_del_by_nonexisting_key);
   TC(ts, map_get_before_and_after_replacement);
+  TC(ts, store_8_entries);
+  TC(ts, store_16_entries);
   TC(ts, store_2000_entries);
   TC(ts, map_iterator);
   TC(ts, map_is_unordered);
