@@ -33,6 +33,7 @@ struct Map {
   MapStatus status;
 };
 
+static int Map_resizeRehash(Map* m, size_t new_capacity);
 static int Map_expand(Map* m);
 static int Map_shrink(Map* m);
 static void* Map_setEntry(Map* m, void const* key, void* value);
@@ -193,28 +194,7 @@ char const* MapIter_getKey(MapIter* it) {
   return it->key;
 }
 
-static int Map_expand(Map* m) {
-  size_t new_capacity = m->capacity * 2;
-
-  MapEntry* entries = realloc(m->entries, new_capacity * sizeof(MapEntry));
-  if (!entries) {
-    m->status = MAP_ERROR;
-    return -1;
-  }
-
-  memset(entries + m->capacity, 0, (new_capacity - m->capacity) * sizeof(MapEntry));
-
-  m->capacity = new_capacity;
-  m->entries = entries;
-
-  return 0;
-}
-
-static int Map_shrink(Map* m) {
-  size_t new_capacity = m->capacity / 2;
-  if (new_capacity < MAP_INITIAL_CAPACITY)
-    return 0;
-
+static int Map_resizeRehash(Map* m, size_t new_capacity) {
   MapEntry* new_entries = calloc(new_capacity, sizeof(MapEntry));
   if (!new_entries) {
     m->status = MAP_ERROR;
@@ -237,6 +217,19 @@ static int Map_shrink(Map* m) {
   m->entries = new_entries;
 
   return 0;
+}
+
+static int Map_expand(Map* m) {
+  return Map_resizeRehash(m, m->capacity * 2);
+
+}
+
+static int Map_shrink(Map* m) {
+  size_t new_capacity = m->capacity / 2;
+  if (new_capacity < MAP_INITIAL_CAPACITY)
+    return 0;
+
+  return Map_resizeRehash(m, new_capacity);
 }
 
 static void* Map_setEntry(Map* m, void const* key, void* value) {
