@@ -2,10 +2,10 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "expr_parser.h"
 #include "../token.h"
 #include "../utility.h"
 #include "../vector.h"
+#include "expr_parser.h"
 
 typedef struct {
   Vector* e; //< An expression
@@ -13,7 +13,7 @@ typedef struct {
   Token prev;
   ExprError error;
   bool has_error;
-  bool operations_retrieved;
+  bool expressions_retrieved;
 } DefaultExprParser;
 
 static void DefaultExprParser_deinit(void* impl);
@@ -44,12 +44,12 @@ ExprParser DefaultExprParser_make(void) {
   impl->o = operators;
 
   ExprParser p = {
-    ._m_feed = DefaultExprParser_feed,
-    ._m_deinit = DefaultExprParser_deinit,
-    ._m_getOperations = DefaultExprParser_getOperations,
-    ._m_getExpressions = DefaultExprParser_getExpressions,
-    ._m_getError = DefaultExprParser_getError,
-    ._m_impl = impl,
+      ._m_feed = DefaultExprParser_feed,
+      ._m_deinit = DefaultExprParser_deinit,
+      ._m_getOperations = DefaultExprParser_getOperations,
+      ._m_getExpressions = DefaultExprParser_getExpressions,
+      ._m_getError = DefaultExprParser_getError,
+      ._m_impl = impl,
   };
 
   return p;
@@ -57,9 +57,9 @@ ExprParser DefaultExprParser_make(void) {
 
 static void DefaultExprParser_deinit(void* impl) {
   DefaultExprParser* p = impl;
-  Vector_destroy(p->e);
-  if (!p->operations_retrieved) {
-    Vector_destroy(p->o);
+  Vector_destroy(p->o);
+  if (!p->expressions_retrieved) {
+    Vector_destroy(p->e);
   }
   free(impl);
 }
@@ -148,12 +148,12 @@ int DefaultExprParser_feed(void* impl, Token tok) {
 
 static Vector* DefaultExprParser_getOperations(void* impl) {
   DefaultExprParser* p = impl;
-  p->operations_retrieved = true;
   return p->o;
 }
 
 static Vector* DefaultExprParser_getExpressions(void* impl) {
   DefaultExprParser* p = impl;
+  p->expressions_retrieved = true;
   return p->e;
 }
 

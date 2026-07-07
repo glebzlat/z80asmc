@@ -42,9 +42,9 @@ struct ExprParser {
 
 /** Destroy `ExprParser` instance
  *
- * `ExprParser` does not destroy its operations vector if
- * `ExprParser_getOperations` is called at least once. If the caller retrieves
- * operations vector, it becomes responsible for its destruction.
+ * `ExprParser` does not destroy its expressions vector if
+ * `ExprParser_getExpressions` is called at least once. If the caller retrieves
+ * expressions vector, it becomes responsible for its destruction.
  *
  * @param p `ExprParser`
  */
@@ -64,15 +64,15 @@ int ExprParser_feed(ExprParser* p, Token tok);
 
 /** Retrieve operations vector
  *
- * `ExprParser` does not destroy operations vector if this function is called
- * at least once. See the `ExprParser_deinit` function for more details.
- *
  * @param p `ExprParser`
  * @returns Operations vector
  */
 Vector* ExprParser_getOperations(ExprParser* p);
 
 /** Retrieve expressions vector
+ *
+ * `ExprParser` does not destroy expressions vector if this function is called
+ * at least once. See the `ExprParser_deinit` function for more details.
  *
  * @param p `ExprParser`
  * @returns Expressions vector
