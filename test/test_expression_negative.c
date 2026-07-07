@@ -5,43 +5,63 @@
 #include <expression/expr_parser.h>
 #include <string_lexer.h>
 
-#include "common.h"
+#include "test_suite.h"
+#include "token.h"
+
+TEST_P(expr_parser_lex_fail, char const* expr, ExprErrorType err_type, Token err_token) {
+  Lexer lex = StringLexer_make(expr);
+  ExprParser parser = DefaultExprParser_make();
+
+  bool expr_parser_failed = false;
+  Token tok = {0};
+  while (tok.type != TOKEN_END) {
+    tok = Lexer_next(&lex);
+    if (ExprParser_feed(&parser, tok) == -1) {
+      expr_parser_failed = true;
+      break;
+    }
+  }
+
+  CHECK_BOOL_EQUAL(expr_parser_failed, true);
+
+  ExprError err = ExprParser_getError(&parser);
+  CHECK_INT_EQUAL(err.type, err_type);
+  CHECK_TOKEN_TYPE_EQUAL(err.tok.type, err_token.type);
+  CHECK_UINT_EQUAL(err.tok.len, err_token.len);
+  CHECK_UINT_EQUAL(err.tok.line, err_token.line);
+  CHECK_UINT_EQUAL(err.tok.col, err_token.col);
+  CHECK_BOOL_EQUAL(err.tok.unary, err_token.unary);
+  CHECK_STR_EQUAL_LEN(err.tok.value, err_token.value, err.tok.len);
+
+TEST_CLEANUP:
+  ExprParser_deinit(&parser);
+  StringLexer_deinit(&lex);
+}
 
 int testExpressionFail(char const* expr, ExprErrorType err_type, char const* err_token_repr);
 
 int main(void) {
-  int failed_tests = 0;
+  TestSuite ts = TestSuite_make();
 
-  failed_tests += testExpressionFail("*1", EXPR_ERROR_WRONG_UNARY_OP, "1:1:TOKEN_STAR:*");
-  failed_tests += testExpressionFail("((1+2)", EXPR_ERROR_UNBALANCED_LEFT_PAREN, "1:6:TOKEN_END:)");
-  failed_tests += testExpressionFail("(1+2))", EXPR_ERROR_UNBALANCED_RIGHT_PAREN, "1:6:TOKEN_RIGHT_PAREN:)");
-  failed_tests += testExpressionFail("1,2", EXPR_ERROR_UNEXPECTED_TOKEN, "1:2:TOKEN_COMMA:,");
-
-  return failed_tests == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
-}
-
-int testExpressionFail(char const* expr, ExprErrorType err_type, char const* err_token_repr) {
-  Lexer lex = StringLexer_make(expr);
-  ExprParser parser = DefaultExprParser_make();
-
-  bool assert_failed = false;
-
-  Token tok = {0};
-  while (tok.type != TOKEN_END) {
-    tok = Lexer_next(&lex);
-
-    if (ExprParser_feed(&parser, tok) == -1) {
-      ExprError err = ExprParser_getError(&parser);
-      CHECK_EQUAL(err.type, err_type, NULL);
-      char* tok_str = Token_format(&err.tok);
-      CHECK_STREQUAL(tok_str, err_token_repr, free(tok_str));
-      free(tok_str);
-      assert_failed = true;
-    }
+  {
+    Token tok = {.value = "*", .type = TOKEN_STAR, .len = 1, .line = 1, .col = 1};
+    TC_P(ts, expr_parser_lex_fail, "*1", EXPR_ERROR_WRONG_UNARY_OP, tok);
   }
 
-  ExprParser_deinit(&parser);
-  StringLexer_deinit(&lex);
+  {
+    Token tok = {.value = ")", .type = TOKEN_END, .len = 1, .line = 1, .col = 6};
+    TC_P(ts, expr_parser_lex_fail, "((1+2)", EXPR_ERROR_UNBALANCED_LEFT_PAREN, tok);
+  }
 
-  return !assert_failed;
+  {
+    Token tok = {.value = ")", .type = TOKEN_RIGHT_PAREN, .len = 1, .line = 1, .col = 6};
+    TC_P(ts, expr_parser_lex_fail, "(1+2))", EXPR_ERROR_UNBALANCED_RIGHT_PAREN, tok);
+  }
+
+  {
+    Token tok = {.value = ",", .type = TOKEN_COMMA, .len = 1, .line = 1, .col = 2};
+    TC_P(ts, expr_parser_lex_fail, "1,2", EXPR_ERROR_UNEXPECTED_TOKEN, tok);
+  }
+
+  return ts.tests_failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }

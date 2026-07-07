@@ -1,3 +1,4 @@
+#include "token.h"
 #include "utility.h"
 #include <assert.h>
 #include <stdarg.h>
@@ -7,7 +8,8 @@
 #include <lexer.h>
 #include <string_lexer.h>
 
-#include "common.h"
+#include "test_suite.h"
+#include "vector.h"
 
 typedef struct {
   char const* lit;
@@ -15,126 +17,141 @@ typedef struct {
   bool unary;
 } ClueToken;
 
-int testExpression(char const* input, size_t n_tokens, ...);
-
-int main(void) {
-  int tests_failed = 0;
-
-  {
-    ClueToken t1 = {.lit = "1", .type = TOKEN_DECIMAL}, t2 = {.lit = "2", .type = TOKEN_DECIMAL},
-              t3 = {.type = TOKEN_PLUS};
-    tests_failed += testExpression("1+2", 3, t1, t2, t3);
-  }
-
-  {
-    ClueToken t1 = {.lit = "1"}, t2 = {.lit = "2"}, t3 = {.lit = "3"}, t4 = {.type = TOKEN_STAR},
-              t5 = {.type = TOKEN_PLUS};
-    tests_failed += testExpression("1+2*3", 5, t1, t2, t3, t4, t5);
-  }
-
-  {
-    ClueToken t1 = {.lit = "1"}, t2 = {.lit = "2"}, t3 = {.type = TOKEN_PLUS}, t4 = {.lit = "3"},
-              t5 = {.type = TOKEN_STAR};
-    tests_failed += testExpression("(1+2)*3", 5, t1, t2, t3, t4, t5);
-  }
-
-  {
-    ClueToken t1 = {.lit = "1"}, t2 = {.type = TOKEN_MINUS, .unary = true};
-    tests_failed += testExpression("-1", 2, t1, t2);
-  }
-
-  {
-    ClueToken t1 = {.lit = "1"}, t2 = {.type = TOKEN_PLUS, .unary = true}, t3 = {.type = TOKEN_MINUS, .unary = true};
-    tests_failed += testExpression("-(+1)", 3, t1, t2, t3);
-  }
-
-  {
-    ClueToken t1 = {.lit = "a"};
-    tests_failed += testExpression("a", 1, t1);
-  }
-
-  {
-    ClueToken t1 = {.lit = "01"};
-    tests_failed += testExpression("0x01", 1, t1);
-  }
-
-  {
-    ClueToken t1 = {.lit = "a"}, t2 = {.type = TOKEN_BANG, .unary = true};
-    tests_failed += testExpression("!a", 2, t1, t2);
-  }
-
-  {
-    // a ! b && c d && ||
-    ClueToken t1 = {.lit = "a"}, t2 = {.type = TOKEN_BANG, .unary = true}, t3 = {.lit = "b"},
-              t4 = {.type = TOKEN_DOUBLE_AMPERSAND}, t5 = {.lit = "c"}, t6 = {.lit = "d"},
-              t7 = {.type = TOKEN_DOUBLE_AMPERSAND}, t8 = {.type = TOKEN_DOUBLE_BAR};
-    tests_failed += testExpression("!a && b || c && d", 8, t1, t2, t3, t4, t5, t6, t7, t8);
-  }
-
-  {
-    // a b << c > d ==
-    ClueToken t1 = {.lit = "a"}, t2 = {.lit = "b"}, t3 = {.type = TOKEN_LEFT_SHIFT},
-              t4 = {.lit = "c"}, t5 = {.type = TOKEN_RIGHT_BRACE}, t6 = {.lit = "d"},
-              t7 = {.type = TOKEN_EQUAL_EQUAL};
-    tests_failed += testExpression("a << b > c == d", 7, t1, t2, t3, t4, t5, t6, t7);
-  }
-
-  {
-    // a b == c != d ==
-    ClueToken t1 = {.lit = "a"}, t2 = {.lit = "b"}, t3 = {.type = TOKEN_EQUAL_EQUAL},
-              t4 = {.lit = "c"}, t5 = {.type = TOKEN_BANG_EQUAL}, t6 = {.lit = "d"},
-              t7 = {.type = TOKEN_EQUAL_EQUAL};
-    tests_failed += testExpression("a == b != c == d", 7, t1, t2, t3, t4, t5, t6, t7);
-  }
-
-  return tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
-}
-
-int testExpression(char const* input, size_t n_tokens, ...) {
+TEST_P(expr_parser_lex_parse_expr, char const* input, size_t n_tokens, ClueToken const* tok_arr) {
   Lexer lex = StringLexer_make(input);
   ExprParser parser = DefaultExprParser_make();
+  Vector* expressions = NULL;
 
   while (true) {
     Token tok = Lexer_next(&lex);
-
-    if (ExprParser_feed(&parser, tok) == -1) {
-      ExprError err = ExprParser_getError(&parser);
-      char* tok_str = Token_format(&err.tok);
-      fprintf(stderr, "ExprParser_get failed: %s : %s\n", ExprErrorType_toStr(err.type), tok_str);
-      free(tok_str);
-      return 1;
-    }
+    CHECK_INT_NEQUAL(ExprParser_feed(&parser, tok), -1);
 
     if (tok.type == TOKEN_END)
       break;
   }
 
-  Vector* expressions = ExprParser_getExpressions(&parser);
-  for (size_t i = 0; i < Vector_len(expressions); ++i) {
-    char* tok_str = Token_format(Vector_at(expressions, i));
-    printf("%s ", tok_str);
-    free(tok_str);
+  expressions = ExprParser_getExpressions(&parser);
+  if (TEST_VERBOSE_LOG()) {
+    for (size_t i = 0; i < Vector_len(expressions); ++i) {
+      char* tok_str = Token_format(Vector_at(expressions, i));
+      printf("%s ", tok_str);
+      free(tok_str);
+    }
+    printf("\n");
   }
-  printf("\n");
 
-  CHECK(Vector_len(expressions) == n_tokens, NULL);
+  CHECK_UINT_EQUAL(Vector_len(expressions), n_tokens);
 
-  va_list ap;
-  va_start(ap, n_tokens);
   for (size_t i = 0; i < n_tokens; ++i) {
     Token* tok = Vector_at(expressions, i);
-    ClueToken clue = va_arg(ap, ClueToken);
+    ClueToken clue = tok_arr[i];
 
-    if (clue.type)
-      CHECK(tok->type == clue.type, NULL);
+    CHECK_TOKEN_TYPE_EQUAL(tok->type, clue.type);
     if (clue.lit)
-      CHECK(strncasecmp(tok->value, clue.lit, tok->len) == 0, NULL);
-    CHECK(tok->unary == clue.unary, NULL);
+      CHECK(strncasecmp(tok->value, clue.lit, tok->len) == 0);
+    CHECK_BOOL_EQUAL(tok->unary, clue.unary);
   }
-  va_end(ap);
+
+TEST_CLEANUP:
+  if (TEST_FAILED()) {
+    ExprError err = ExprParser_getError(&parser);
+    char* tok_str = Token_format(&err.tok);
+    _PRINTERR_VA("ExprParser_get failed: %s : %s\n", ExprErrorType_toStr(err.type), tok_str);
+    free(tok_str);
+  }
+
+  if (expressions)
+    Vector_destroy(expressions);
 
   ExprParser_deinit(&parser);
   StringLexer_deinit(&lex);
+}
 
-  return 0;
+int main(void) {
+  TestSuite ts = TestSuite_make();
+
+  {
+    // 1 2 +
+    ClueToken tokens[] = {
+        {.lit = "1", .type = TOKEN_DECIMAL}, {.lit = "2", .type = TOKEN_DECIMAL}, {.type = TOKEN_PLUS}};
+    TC_P(ts, expr_parser_lex_parse_expr, "1+2", 3, tokens);
+  }
+
+  {
+    // 1 2 3 * +
+    ClueToken tokens[] = {{.lit = "1", .type = TOKEN_DECIMAL},
+                          {.lit = "2", .type = TOKEN_DECIMAL},
+                          {.lit = "3", .type = TOKEN_DECIMAL},
+                          {.type = TOKEN_STAR},
+                          {.type = TOKEN_PLUS}};
+    TC_P(ts, expr_parser_lex_parse_expr, "1+2*3", 5, tokens);
+  }
+
+  {
+    // 1 2 + 3 *
+    ClueToken tokens[] = {{.lit = "1", .type = TOKEN_DECIMAL},
+                          {.lit = "2", .type = TOKEN_DECIMAL},
+                          {.type = TOKEN_PLUS},
+                          {.lit = "3", .type = TOKEN_DECIMAL},
+                          {.type = TOKEN_STAR}};
+    TC_P(ts, expr_parser_lex_parse_expr, "(1+2)*3", 5, tokens);
+  }
+
+  {
+    // 1 -
+    ClueToken tokens[] = {{.lit = "1", .type = TOKEN_DECIMAL}, {.type = TOKEN_MINUS, .unary = true}};
+    TC_P(ts, expr_parser_lex_parse_expr, "-1", 2, tokens);
+  }
+
+  {
+    // 1 + -
+    ClueToken tokens[] = {
+        {.lit = "1", .type = TOKEN_DECIMAL}, {.type = TOKEN_PLUS, .unary = true}, {.type = TOKEN_MINUS, .unary = true}};
+    TC_P(ts, expr_parser_lex_parse_expr, "-(+1)", 3, tokens);
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "a", .type = TOKEN_ID}};
+    TC_P(ts, expr_parser_lex_parse_expr, "a", 1, tokens);
+  }
+
+  {
+    ClueToken tokens[] = {{.lit = "01", .type = TOKEN_HEXADECIMAL}};
+    TC_P(ts, expr_parser_lex_parse_expr, "0x01", 1, tokens);
+  }
+
+  {
+    // a !
+    ClueToken tokens[] = {{.lit = "a", .type = TOKEN_ID}, {.type = TOKEN_BANG, .unary = true}};
+    TC_P(ts, expr_parser_lex_parse_expr, "!a", 2, tokens);
+  }
+
+  {
+    // a ! b && c d && ||
+    ClueToken tokens[] = {{.lit = "a", .type = TOKEN_ID},   {.type = TOKEN_BANG, .unary = true},
+                          {.lit = "b", .type = TOKEN_ID},   {.type = TOKEN_DOUBLE_AMPERSAND},
+                          {.lit = "c", .type = TOKEN_ID},   {.lit = "d", .type = TOKEN_ID},
+                          {.type = TOKEN_DOUBLE_AMPERSAND}, {.type = TOKEN_DOUBLE_BAR}};
+    TC_P(ts, expr_parser_lex_parse_expr, "!a && b || c && d", 8, tokens);
+  }
+
+  {
+    // a b << c > d ==
+    ClueToken tokens[] = {{.lit = "a", .type = TOKEN_ID}, {.lit = "b", .type = TOKEN_ID},
+                          {.type = TOKEN_LEFT_SHIFT},     {.lit = "c", .type = TOKEN_ID},
+                          {.type = TOKEN_RIGHT_BRACE},    {.lit = "d", .type = TOKEN_ID},
+                          {.type = TOKEN_EQUAL_EQUAL}};
+    TC_P(ts, expr_parser_lex_parse_expr, "a << b > c == d", 7, tokens);
+  }
+
+  {
+    // a b == c != d ==
+    ClueToken tokens[] = {{.lit = "a", .type = TOKEN_ID}, {.lit = "b", .type = TOKEN_ID},
+                          {.type = TOKEN_EQUAL_EQUAL},    {.lit = "c", .type = TOKEN_ID},
+                          {.type = TOKEN_BANG_EQUAL},     {.lit = "d", .type = TOKEN_ID},
+                          {.type = TOKEN_EQUAL_EQUAL}};
+    TC_P(ts, expr_parser_lex_parse_expr, "a == b != c == d", 7, tokens);
+  }
+
+  return ts.tests_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
