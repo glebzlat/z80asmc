@@ -64,21 +64,18 @@ if (Z80ASMC_TESTING)
     add_subdirectory(test)
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    find_program(CMAKE_C_CPPCHECK cppcheck)
-    if (CMAKE_C_CPPCHECK)
-        list(APPEND CMAKE_C_CPPCHECK
-            -I${INCLUDE_DIRECTORIES}
-            --enable=all
-            --suppress=missingIncludeSystem
-            --check-level=exhaustive
-            --enable=warning
-            --inconclusive
-            --force
-        )
-    endif()
-    message(STATUS "CMAKE_C_CPPCHECK=${CMAKE_C_CPPCHECK}")
+find_program(CMAKE_C_CPPCHECK NAMES cppcheck)
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cppcheck")
+
+add_custom_target(RunCppcheck
+    ${CMAKE_C_CPPCHECK}
+        --project=${PROJECT_SOURCE_DIR}/project.cppcheck
+        --error-exitcode=1
+    DEPENDS ${CMAKE_C_CPPCHECK}
+)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     list(APPEND COMPILE_OPTIONS -g)
 
     set(SANITIZER_OPTIONS
