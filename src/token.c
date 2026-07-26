@@ -1,18 +1,17 @@
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
-#include <errno.h>
 
-#include "utility.h"
 #include "token.h"
+#include "utility.h"
 
-static int escToInt(char const* ch);
+static uint8_t escToInt(char const* ch, size_t len);
 
 char* Token_format(Token* tok) {
   assert(tok);
   char* buf = NULL;
   if (tok->type == TOKEN_ERROR) {
-    buf = dsprintf("%zu:%zu:%s:%s", tok->line, tok->col, TokenType_str(tok->type), tok->value);
+    buf = dsprintf("%zu:%zu:%s:%.*s", tok->line, tok->col, TokenType_str(tok->type), (int)tok->len, tok->value);
   } else {
     assert(tok->len < INT_MAX);
     char const* unary_str = tok->unary ? "u:" : "";
@@ -115,25 +114,28 @@ char const* TokenType_str(TokenType type) {
 
 unsigned long Token_toInt(Token* tok, bool* correct) {
   assert(tok);
-  char* end = NULL;
-  long value = 0;
+  uint8_t base = 0;
 
+  *correct = false;
   switch (tok->type) {
   case TOKEN_HEXADECIMAL:
-    value = strtol(tok->value, &end, 16);
+    base = 16;
     break;
   case TOKEN_DECIMAL:
-    value = strtol(tok->value, &end, 10);
+    base = 10;
     break;
   case TOKEN_OCTAL:
-    value = strtol(tok->value, &end, 8);
+    base = 8;
     break;
   case TOKEN_BINARY:
-    value = strtol(tok->value, &end, 2);
+    base = 2;
     break;
   case TOKEN_CHAR:
-    value = escToInt(tok->value);
-    break;
+    if (tok->len < 1)
+      return 0;
+
+    *correct = true;
+    return escToInt(tok->value, tok->len);
   case TOKEN_UNINITIALIZED:
   case TOKEN_END:
   case TOKEN_ERROR:
@@ -169,22 +171,12 @@ unsigned long Token_toInt(Token* tok, bool* correct) {
     die("Token_toInt(): token type is not integer convertible");
   }
 
-  if (errno) {
-    *correct = false;
-    return 0;
-  }
-
-  assert(value >= 0);
-  if (end && tok->value + tok->len != end)
-    *correct = false;
-
-  *correct = true;
-  return (unsigned)value;
+  return strtou32(tok->value, tok->len, correct, base);
 }
 
-static int escToInt(char const* ch) {
+static uint8_t escToInt(char const* ch, size_t len) {
   assert(ch);
-  if (ch[0] == '\\') {
+  if (ch[0] == '\\' && len >= 2) {
     switch (ch[1]) {
     case '\\':
       return 92;
@@ -228,5 +220,5 @@ static int escToInt(char const* ch) {
       die("escToInt(): incorrect escape sequence");
     }
   }
-  return ch[0];
+  return (uint8_t)ch[0];
 }

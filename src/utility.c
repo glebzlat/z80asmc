@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -150,4 +151,54 @@ bool is_not_zero(void* ptr, size_t size) {
   }
 
   return false;
+}
+
+uint32_t strtou32(char const* restrict str, size_t len, bool* restrict correct, uint8_t base) {
+  assert(str);
+  assert(correct);
+
+  uint32_t acc, cutoff;
+  int c, cutlim;
+  bool success = true;
+
+  if (base == 0)
+    base = 10;
+
+  cutoff = UINT32_MAX;
+  cutlim = (int)(cutoff % base);
+  cutoff /= base;
+
+  size_t i;
+  for (i = 0, acc = 0; i < len; ++i) {
+    c = (unsigned char)str[i];
+    if (isdigit(c))
+      c -= '0';
+    else if (isalpha(c))
+      c -= isupper(c) ? 'A' - 10 : 'a' - 10;
+    else {
+      success = false;
+      break;
+    }
+
+    if (c >= base) {
+      success = false;
+      break;
+    }
+
+    if (acc > cutoff || (acc == cutoff && c > cutlim)) {
+      acc = UINT32_MAX;
+      errno = ERANGE;
+      success = false;
+      break;
+    }
+
+    acc *= base;
+    acc += (uint32_t)c;
+  }
+
+  if (!i)
+    errno = EINVAL;
+  *correct = success && i;
+
+  return acc;
 }
