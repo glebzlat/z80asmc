@@ -1,0 +1,74 @@
+Current To Do items.
+
+Reduce StringLexer and expr_parser coupling. Currently expr_parser tests use
+a concrete Lexer implementation, which makes them too dependent on Lexer API
+and thus fragile. Fix this by passing the list of Tokens to the test function
+and feeding them to the parser instead of constructing a Lexer instance.
+
+Add symlen field to the Token. Current Token implementation provides only the
+len field that is used as (a) the length of the value and (b) as the length of
+the highlighted symbol in error reports. Make len be only responsible for the
+length of the value by devoting the second meaning to the symlen field.
+
+Properly document Token interface. Currently there is no documentation, which
+makes Token and its interactions complex to understand. For example, one
+important detail that must be documented is that the value is not null-
+terminated, which justifies the presence of the len property.
+
+Fix the bug in the StringLexer implementation: TOKEN_END length. Currently the
+implementation first checks whether the lexer is at the end of the buffer,
+returns a TOKEN_END if so, otherwise proceeds with assigning the current
+pointer to the start pointer. However the start pointer's old value is used
+during TOKEN_END creation, which results in incorrect len value of the returned
+token. Fix this:
+
+```
+--- a/src/string_lexer.c
++++ b/src/string_lexer.c
+@@ -75,11 +75,11 @@ Token StringLexer_next(void* impl) {
+   while (eatWhitespace(lex))
+     ;
+
++  lex->start = lex->cur;
++
+   if (isAtEnd(lex))
+     return makeToken(lex, TOKEN_END);
+
+-  lex->start = lex->cur;
+-
+   Token result;
+   if ((result = parseNumber(lex)).type != TOKEN_UNINITIALIZED ||
+       (result = parseLiteral(lex)).type != TOKEN_UNINITIALIZED)
+```
+
+Fix the bug with incorrect token's column calculation. E.g. the string
+"0x31415\0" is expected to produce the following sequence of tokens:
+
+- {.value = "31415", .len = 5, .type = TOKEN_HEXADECIMAL, .line = 1, .col = 0}
+- {.value = "", .len = 0, .type = TOKEN_END, .line = 1, .col = 7}
+
+Instead the first token that it actually produces is:
+
+- {.value = "31415", .len = 5, .type = TOKEN_HEXADECIMAL, .line = 1, .col = 7}
+
+The bug lies in that the lex's BoL (beginning of the line) is subtracted from
+the current index. The correct implementation would be to subtract the sum of
+BoL and given token's symlen from the current: col = cur - (symlen + BoL).
+
+After all of this, write tests for error printing functionality and ensure
+they're green.
+
+Aside of that: bug in the Parser:
+
+```
+--- a/src/parser.c
++++ b/src/parser.c
+@@ -66,7 +66,7 @@ Parser Parser_make(Lexer* lex, ExprParserBuilder* expr_parser_builder) {
+   if (!errors)
+     die("Vector_new() failed");
+
+-  Map* labels = Map_new(sizeof(int32_t), map_destroy_ir_label);
++  Map* labels = Map_new(sizeof(IRLabel), map_destroy_ir_label);
+   if (!labels)
+     die("Map_new() failed");
+```
