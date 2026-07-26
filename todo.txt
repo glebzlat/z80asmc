@@ -5,16 +5,6 @@ a concrete Lexer implementation, which makes them too dependent on Lexer API
 and thus fragile. Fix this by passing the list of Tokens to the test function
 and feeding them to the parser instead of constructing a Lexer instance.
 
-Add symlen field to the Token. Current Token implementation provides only the
-len field that is used as (a) the length of the value and (b) as the length of
-the highlighted symbol in error reports. Make len be only responsible for the
-length of the value by devoting the second meaning to the symlen field.
-
-Properly document Token interface. Currently there is no documentation, which
-makes Token and its interactions complex to understand. For example, one
-important detail that must be documented is that the value is not null-
-terminated, which justifies the presence of the len property.
-
 Fix the bug in the StringLexer implementation: TOKEN_END length. Currently the
 implementation first checks whether the lexer is at the end of the buffer,
 returns a TOKEN_END if so, otherwise proceeds with assigning the current
