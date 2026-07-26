@@ -72,3 +72,11 @@ Aside of that: bug in the Parser:
    if (!labels)
      die("Map_new() failed");
 ```
+
+Fix strncasecmp NUL-terminator handling. The loop does not stop when one of
+the strings runs into a NUL byte: it only returns 0 when both strings are
+NUL at the same position. If only one is NUL, the function falls through to
+the magnitude comparison and returns -1 or 1, which is incorrect by both
+POSIX strncasecmp and C standard strncmp semantics. Both should return 0
+when one string runs out before the other and the chars matched up to that
+point. Affects callers that pass strings shorter than `len`.
